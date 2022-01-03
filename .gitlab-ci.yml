@@ -1,0 +1,56 @@
+stages:
+  - build
+  - test
+  # - release
+  - runEtl
+
+image: triply/ci:20210723-2
+
+default:
+  before_script:
+    # Gitlab registry
+    - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
+
+build:
+  stage: build
+  script:
+    - ./config/ci/build
+  only:
+    variables:
+      - $MODE == null
+
+test:
+  stage: test
+  script:
+    - ./config/ci/test
+  only:
+    variables:
+      - $MODE == null
+
+runAcceptance:
+  stage: runEtl
+  script:
+    - ./config/ci/run acceptance
+  only:
+    variables:
+      - $MODE == "acceptance"
+runProduction:
+  stage: runEtl
+  script:
+    - ./config/ci/run production
+  only:
+    variables:
+      - $MODE == "production"
+
+# uncoment this and add a 'release' stage at the top to enable image releases
+# release:
+#   stage: release
+#   script:
+#     - ./config/ci/release
+#   only:
+#     variables:
+#       - $MODE == null
+#     refs:
+#       # dont publish feature branches, only master (latest) or new versions
+#       - /^v-.*$/
+#       - master

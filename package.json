@@ -1,0 +1,50 @@
+{
+  "author": "Triply <info@triply.cc>",
+  "dependencies": {
+    "@triply/ratt": "^3.2.7",
+    "chai": "^4.3.4",
+    "eslint-plugin-lodash": "^7.3.0",
+    "fs-extra": "^10.0.0",
+    "lodash": "^4.17.20",
+    "mocha": "^9.1.1",
+    "node-fetch": "^3.0.0",
+    "source-map-support": "^0.5.20",
+    "ts-essentials": "^8.1.0"
+  },
+  "description": "ETL for EDM Conversie Project",
+  "devDependencies": {
+    "@types/chai": "^4.2.21",
+    "@types/fs-extra": "^9.0.12",
+    "@types/lodash": "^4.14.173",
+    "@types/mocha": "^9.0.0",
+    "@typescript-eslint/eslint-plugin": "^4.31.1",
+    "@typescript-eslint/parser": "^4.31.1",
+    "eslint": "^7.32.0",
+    "eslint-config-prettier": "^8.3.0",
+    "eslint-plugin-jest": "^24.4.2",
+    "husky": "7.0.2",
+    "lint-staged": "^11.1.2",
+    "prettier": "^2.4.1",
+    "typescript": "^4.4.3"
+  },
+  "lint-staged": {
+    "*.ts?(x)": [
+      "yarn run util:lint:precommit"
+    ]
+  },
+  "main": "lib/main.js",
+  "name": "edm-conversie-project",
+  "private": true,
+  "scripts": {
+    "build": "tsc -p tsconfig-build.json",
+    "dev": "tsc -p ./tsconfig-build.json --watch --preserveWatchOutput",
+    "postversion": "versionToBranch",
+    "prepare": "husky install ./config/hooks",
+    "test": "mocha $(find ./lib -name '*-test.js') --require source-map-support/register",
+    "util:lint": "ESLINT_STRICT=true ESLINT_EXPENSIVE=true eslint --ext .tsx --ext .ts ./src",
+    "util:lint:precommit": "ESLINT_STRICT=true eslint",
+    "util:validateTs": "tsc -p ./tsconfig-build.json --noEmit",
+    "util:validateTs:watch": "tsc -p ./tsconfig-build.json --noEmit --watch --preserveWatchOutput"
+  },
+  "version": "1.0.0"
+}

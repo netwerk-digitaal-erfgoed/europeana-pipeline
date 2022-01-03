@@ -1,0 +1,19 @@
+#!/bin/bash
+set -e
+source ./config/ci/.env
+MODE=${1}
+if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
+  CONTAINER_NAME="ci-edm-conversie-project-${MODE}"
+  #remove other runs when needed. Otherwise, we'd have duplicate runs working on the same directory
+  docker rm -f ${CONTAINER_NAME} 2> /dev/null || true
+  docker run --rm \
+    -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
+    -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
+    -e TRIPLYDB_ACCOUNT=${TRIPLYDB_ACCOUNT} \
+    -e MODE=${MODE} \
+    --name ${CONTAINER_NAME} \
+    ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG}
+else
+  echoerr "Expected ${MODE} to be 'production' or 'acceptance'"
+  exit 1;
+fi
