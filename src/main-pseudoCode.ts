@@ -79,7 +79,7 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   });
   app.use(mw.fromJson(datasets));
 
-  app.use(mw.loadRdf(app.record["dataset"]))
+  // app.use(mw.loadRdf(app.record["dataset"]))
 
   app.use(
     mw.validateShacl(
@@ -126,7 +126,68 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   }
   )
 
-  app.use(mw.sparqlConstruct(["queries"],app.record["endpoint"]))
+    // app.use(
+    //   mw.add({
+    //     key: "distribution",
+    //     value: async (ctx) => {
+    //       const distributions = await retrieveDistributions(ctx.store);
+    //       const distribution =
+    //         distributions.find((val) => {
+    //           return val.format === "application/sparql-query";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "application/trig";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "application/turtle";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "text/turtle";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "application/n-quads";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "application/n-triples";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "application/ld+json";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "text/n3";
+    //         }) ||
+    //         distributions.find((val) => {
+    //           return val.format === "application/rdf+xml";
+    //         }) ||
+    //         undefined;
+    //       return distribution;
+    //     },
+    //   })
+    // );
+    //
+    // // 3 implementations
+    // // SPARQL over external endpoint
+    // app.use(
+    //   mw.when(
+    //     (ctx) => {
+    //       return ctx.get("distribution.format") === "application/sparql-query";
+    //     },
+    //     [
+    //       executeQuery("test.rq"),
+    //       // executeQuery("ecc-books2edm.rq"),
+    //       // executeQuery("ecc-ucfix2edm.rq"),
+    //       // executeQuery("nmvw2edm.rq"),
+    //     ]
+    //   )
+    // );
+
+    // SPARQL in memory
+
+    // SPARQL over internal endpoint
+    // app.use(mw.when((ctx)=>{return !(ctx.get("distribution.format")==="application/sparql-query")},[mw.logRecord(),retrieveCachedDataset()]))
+
+
+  // app.use(mw.sparqlConstruct(["queries"],app.record["endpoint"]))
 
 
   app.use(mw.toRdf(app.destinations.out));
