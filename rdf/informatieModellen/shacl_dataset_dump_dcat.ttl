@@ -5,12 +5,12 @@
 @prefix void: <http://rdfs.org/ns/void#> .
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 
-## Shape constraints for a Europeana compliant dataset description in DCAT pointing to an RDF dump 
+## Shape constraints for a Europeana compliant dataset description in DCAT pointing to an RDF dump
 
 # validate the dataset description
-ex:dataset_dump a sh:NodeShape ;
+ex:dcatDatasetShape a sh:NodeShape ;
 
-  # focus on the resources from the dcat:Dataset class  
+  # focus on the resources from the dcat:Dataset class
   sh:targetClass dcat:Dataset;
 
   # a title is required
@@ -28,7 +28,7 @@ ex:dataset_dump a sh:NodeShape ;
     sh:message "missing or invalid 'distribution' value"] .
 
 # validate the distribution description
-ex:dataset_dump_distr a sh:NodeShape ;
+ex:dcatDistributionShape a sh:NodeShape ;
 
   # focus on the resources from the dcat:Distribution class
   sh:targetClass dcat:Distribution ;
@@ -41,7 +41,7 @@ ex:dataset_dump_distr a sh:NodeShape ;
     sh:maxCount 1 ;
     sh:message "missing or invalid 'license' (IRI value expected)"] ;
 
-  # it should point to a downloadable dataset 
+  # it should point to a downloadable dataset
   sh:property [
     sh:path dcat:downloadURL ;
     sh:nodeKind sh:IRI ;
@@ -51,6 +51,6 @@ ex:dataset_dump_distr a sh:NodeShape ;
   # and it should be in a valid RDF mime type
   sh:property [
     sh:path dcat:mediaType ;
-    sh:in ("application/rdf+xml" "text/n3" "application/n-triples" "application/x-turtle" "application/ld+son") ;
+    sh:in ("application/rdf+xml" "text/n3" "application/n-triples" "application/x-turtle" "application/ld+json") ;
     sh:minCount 1 ;
-    sh:message "missing or invalid 'mediaType', allowed values are: ‘application/rdf+xml’, ‘text/n3’, ‘application/n-triples’, ‘application/x-turtle’, or ‘application/ld+son’)"] .
+    sh:message "missing or invalid 'mediaType', allowed values are: ‘application/rdf+xml’, ‘text/n3’, ‘application/n-triples’, ‘application/x-turtle’, or ‘application/ld+json’)"] .

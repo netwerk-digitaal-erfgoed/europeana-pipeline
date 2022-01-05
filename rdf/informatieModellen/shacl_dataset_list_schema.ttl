@@ -4,22 +4,22 @@
 @prefix void: <http://rdfs.org/ns/void#> .
 @prefix schema: <http://schema.org/> .
 
-## Shape constraints for a Europeana compliant dataset description in Schema.org for listing RDF resources 
+## Shape constraints for a Europeana compliant dataset description in Schema.org for listing RDF resources
 
 # validate the Dataset description
-ex:dataset_list a sh:NodeShape ;
+ex:schemaDatasetlistShape a sh:NodeShape ;
 
   # focus on the resources from the schema:Dataset class
   sh:targetClass schema:Dataset;
 
   # a title is required
-  sh:property [ 
+  sh:property [
     sh:path schema:name ;
     sh:nodeKind sh:Literal ;
-    sh:minCount 1; 
+    sh:minCount 1;
     sh:message "missing or invalid 'schema:name'"] ;
 
-  # a machine readable license is required 
+  # a machine readable license is required
   sh:property [
     sh:path schema:license ;
     sh:nodeKind sh:IRI ;

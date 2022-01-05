@@ -5,10 +5,10 @@
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix ex:    <http://example.org/> .
 
-## Shape constraints for a Europeana compliant dataset description in VOID for listing RDF resources 
+## Shape constraints for a Europeana compliant dataset description in VOID for listing RDF resources
 
 # validate the Dataset description
-ex:dataset_list a sh:NodeShape ;
+ex:voidDatasetlistShape a sh:NodeShape ;
 
   # focus on the resources from the schema:Dataset class
   sh:targetClass void:Dataset;
@@ -23,8 +23,8 @@ ex:dataset_list a sh:NodeShape ;
 ## Issue: according to the spec for VOID is ok to have no license property on the dataset level
 ##        but in that case there should be license property on the cho level.
 ##        The current validation on dataset and cho level do not cover this requirement
- 
-  # a machine readable license is required  
+
+  # a machine readable license is required
   #sh:property [
   #  sh:path dcterms:license ;
   #  sh:nodeKind sh:IRI ;

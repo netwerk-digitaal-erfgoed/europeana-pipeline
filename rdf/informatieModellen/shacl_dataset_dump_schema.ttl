@@ -3,10 +3,10 @@
 @prefix sh:  <http://www.w3.org/ns/shacl#> .
 @prefix schema: <http://schema.org/> .
 
-## Shape constraints for a Europeana compliant dataset description in Schema.org pointing to an RDF dump 
+## Shape constraints for a Europeana compliant dataset description in Schema.org pointing to an RDF dump
 
 # validate the Dataset description
-ex:dataset_dump a sh:NodeShape ;
+ex:schemaDatasetShape a sh:NodeShape ;
 
   # focus on the resources from the schema:Dataset class
   sh:targetClass schema:Dataset;
@@ -26,7 +26,7 @@ ex:dataset_dump a sh:NodeShape ;
     sh:message "missing or invalid 'distribution' value"] .
 
 # validate the distribution description
-ex:dataset_dump_distr a sh:NodeShape ;
+ex:schemaDistributionShape a sh:NodeShape ;
 
   # focus on the resources from the dcat:Distribution class
   sh:targetClass schema:DataDownload ;
@@ -39,7 +39,7 @@ ex:dataset_dump_distr a sh:NodeShape ;
     sh:maxCount 1 ;
     sh:message "missing or invalid 'license' (IRI value expected)"] ;
 
-  # it should point to a downloadable dataset 
+  # it should point to a downloadable dataset
   sh:property [
     sh:path schema:contentUrl ;
     sh:nodeKind sh:IRIOrLiteral ;

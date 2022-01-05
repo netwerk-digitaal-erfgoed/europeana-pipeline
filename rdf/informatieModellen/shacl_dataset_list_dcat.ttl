@@ -5,10 +5,10 @@
 @prefix dcat: <http://www.w3.org/ns/dcat#> .
 @prefix ex:    <http://example.org/> .
 
-## Shape constraints for a Europeana compliant dataset description in DCAT for listing RDF resources 
+## Shape constraints for a Europeana compliant dataset description in DCAT for listing RDF resources
 
 # validate the Dataset description
-ex:dataset_list a sh:NodeShape ;
+ex:dcatDatasetlistShape a sh:NodeShape ;
 
   # focus on the resources from the schema:Dataset class
   sh:targetClass dcat:Dataset;
@@ -20,7 +20,7 @@ ex:dataset_list a sh:NodeShape ;
     sh:minCount 1 ;
     sh:message "missing or invalid 'title'"] ;
 
-  # a machine readable license is required  
+  # a machine readable license is required
   sh:property [
     sh:path dcterms:license ;
     sh:nodeKind sh:IRI ;
