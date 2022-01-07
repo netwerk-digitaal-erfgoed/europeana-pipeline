@@ -56,7 +56,7 @@ export async function add_query(
   args: AddQueryArgs
 ) {
   const datasetId = (await args.dataset.getInfo()).id
-  await _this.addQuery({
+  return await _this.addQuery({
     accessLevel: args.accessLevel ? args.accessLevel : 'private',
     autoselectService: false,
     dataset: datasetId,
@@ -158,12 +158,17 @@ export async function ensure_query(
   try {
     const query = await _this.getQuery(name)
     const info = await query.getInfo()
+    if (info.dataset?.id != (await args.dataset.getInfo()).id) {
+      await remove_query(_this, name)
+      throw Error("Requested query does not match the dataset that was retrieved.")
+    }
     if (info.requestConfig?.payload.query != args.queryString) {
       await remove_query(_this, name)
       throw Error("Requested query does not match the query string that was retrieved.")
     }
+    return query
   } catch (e) {
-    await add_query(_this, name, args)
+    return await add_query(_this, name, args)
   }
 }
 
