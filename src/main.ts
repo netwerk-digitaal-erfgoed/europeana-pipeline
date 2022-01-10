@@ -1,7 +1,7 @@
 import { Ratt, CliContext } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
 import { prefix } from "./helpers/ratt-helpers";
-import { forEachStream } from "./helpers/etl-helpers";
+import { forEachiterator } from "./helpers/etl-helpers";
 import { addMwCallSiteToError } from "@triply/ratt/lib/utils";
 import {streamToString} from "@triply/ratt/lib/utils/files";
 import { Parser } from "n3";
@@ -289,13 +289,12 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
             queryString: retrieveInstances,
             dataset: dataset,
           });
-          // Async iterator
           return query.results().bindings();
         },
       }),
-      forEachStream(instanties,
+      forEachiterator(instanties,
         (ctx,next)=>{
-          console.log("test")
+          console.log(ctx.record)
           return next()
         }
       )
@@ -321,11 +320,14 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
             throw e;
           }
 
-          return await engine.resultToString(queryResult, "text/tab-separated-values");
+          if (queryResult.type === "bindings") {
+            return queryResult.bindings()
+          }
+          return null
         },
       }),
-      forEachStream(instanties,
-        mw.logRecord()
+      forEachiterator(instanties,
+
       )
     ),
     mw.when(
@@ -349,8 +351,11 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
           }
         },
       }),
-      forEachStream(instanties,
-        mw.logRecord()
+      forEachiterator(instanties,
+        (ctx,next)=>{
+          console.log(ctx.record)
+          return next()
+        }
       )
     )
   );
