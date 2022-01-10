@@ -1,0 +1,29 @@
+PREFIX schema:  <http://schema.org/>
+PREFIX sdo:  <https://schema.org/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX ksamsok: <http://kulturarvsdata.se/ksamsok#>
+PREFIX bf:      <http://id.loc.gov/ontologies/bibframe/>
+select ?uri ?type WHERE {
+  VALUES ?type {
+    bf:Instance
+    dcterms:PhysicalResource
+    ksamsok:Entity
+    schema:Book
+    schema:Organization
+    schema:Painting
+    schema:Person
+    schema:Photograph
+    schema:Place
+    schema:Sculpture
+    schema:VisualArtwork
+    sdo:Book
+    sdo:Organization
+    sdo:Painting
+    sdo:Person
+    sdo:Photograph
+    sdo:Place
+    sdo:Sculpture
+    sdo:VisualArtwork
+  }
+  ?uri a ?type .
+}

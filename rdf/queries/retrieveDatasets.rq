@@ -1,0 +1,36 @@
+PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
+PREFIX dct: <http://purl.org/dc/terms/>
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+select ?datasetIri ?dataUrl ?dataFormat where {
+  {
+    select ?datasetIri (max(?score) as ?maxScore) where {
+      {
+        ?datasetIri a dcat:Dataset .
+        ?datasetIri dcat:distribution ?distribution .
+        ?distribution dcat:accessURL ?url .
+        ?distribution dct:format ?format.
+        values(?format ?score){
+            ("application/sparql-query" 1)
+            ("application/trig" 2)
+            ("application/n-quads" 3)
+            ("application/turtle" 4)
+            ("text/turtle" 5)
+            ("application/n-triples" 6)
+            ("application/rdf+xml" 7)
+        }
+      }
+    } group by ?datasetIri
+  }
+  ?datasetIri dcat:distribution ?distribution .
+  ?distribution dcat:accessURL ?dataUrl .
+  ?distribution dct:format ?dataFormat.
+  values(?dataFormat ?maxScore){
+    ("application/sparql-query" 1)
+    ("application/trig" 2)
+    ("application/n-quads" 3)
+    ("application/turtle" 4)
+    ("text/turtle" 5)
+    ("application/n-triples" 6)
+    ("application/rdf+xml" 7)
+  }
+}

@@ -1,0 +1,9 @@
+PREFIX dcat: <http://www.w3.org/ns/dcat#>
+construct {
+  ?s ?p ?o
+} WHERE {
+  graph ?graaf {
+    ?dataset a dcat:Dataset .
+    ?s ?p ?o
+  }
+}

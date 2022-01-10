@@ -1,126 +1,33 @@
 import { Ratt, CliContext } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
-import { prefix } from "./helpers/ratt-helpers";
-import { forEachiterator } from "./helpers/etl-helpers";
-import { addMwCallSiteToError } from "@triply/ratt/lib/utils";
-import {streamToString} from "@triply/ratt/lib/utils/files";
-import { Parser } from "n3";
-import { IQueryResult } from "@comunica/actor-init-sparql/lib/ActorInitSparql-browser";
-import { newEngine } from "@triply/actor-init-sparql-rdfjs";
-import { ensure_query, ensure_service } from "./helpers/triplydb-helpers";
-const md5 = require("md5");
-import * as path from "path"
-import parse from "csv-parse";
-import Pumpify from "pumpify";
-// Prefixes
-const defaultGraph = Ratt.prefixer(
-  "https://data.netwerkdigitaalerfgoed.nl/edm/"
-);
-const reportGraph = defaultGraph("violationReport");
-const prefixes = {
-  defaultGraph: defaultGraph,
-  ...prefix,
-};
-
-export declare type CompressionType = "gz" | undefined;
-
-const retrieveInstancesName = "retrieveInstances";
-const retrieveInstances = `
-PREFIX schema:  <http://schema.org/>
-PREFIX sdo:  <https://schema.org/>
-PREFIX dcterms: <http://purl.org/dc/terms/>
-PREFIX ksamsok: <http://kulturarvsdata.se/ksamsok#>
-PREFIX bf:      <http://id.loc.gov/ontologies/bibframe/>
-select ?uri WHERE {
-  VALUES ?type {
-    bf:Instance
-    dcterms:PhysicalResource
-    ksamsok:Entity
-    schema:Book
-    schema:Organization
-    schema:Painting
-    schema:Person
-    schema:Photograph
-    schema:Place
-    schema:Sculpture
-    schema:VisualArtwork
-    sdo:Book
-    sdo:Organization
-    sdo:Painting
-    sdo:Person
-    sdo:Photograph
-    sdo:Place
-    sdo:Sculpture
-    sdo:VisualArtwork
-  }
-  ?uri a ?type .
-}`;
-
-const retrieveDatasetsQueryString = `
-PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
-PREFIX dct: <http://purl.org/dc/terms/>
-PREFIX dcat: <http://www.w3.org/ns/dcat#>
-select ?datasetIri ?dataUrl ?dataFormat where {
-  {
-    select ?datasetIri (max(?score) as ?maxScore) where {
-      {
-        ?datasetIri a dcat:Dataset .
-        ?datasetIri dcat:distribution ?distribution .
-        ?distribution dcat:accessURL ?url .
-        ?distribution dct:format ?format.
-        values(?format ?score){
-            ("application/sparql-query" 1)
-            ("application/trig" 2)
-            ("application/n-quads" 3)
-            ("application/turtle" 4)
-            ("text/turtle" 5)
-            ("application/n-triples" 6)
-            ("application/rdf+xml" 7)
-        }
-      }
-    } group by ?datasetIri
-  }
-  ?datasetIri dcat:distribution ?distribution .
-  ?distribution dcat:accessURL ?dataUrl .
-  ?distribution dct:format ?dataFormat.
-  values(?dataFormat ?maxScore){
-    ("application/sparql-query" 1)
-    ("application/trig" 2)
-    ("application/n-quads" 3)
-    ("application/turtle" 4)
-    ("text/turtle" 5)
-    ("application/n-triples" 6)
-    ("application/rdf+xml" 7)
-  }
-}`;
-
-const retrieveDatasetMetadataQueryString = `
-PREFIX dcat: <http://www.w3.org/ns/dcat#>
-construct {
-  ?s ?p ?o
-} WHERE {
-  graph ?graaf {
-    ?dataset a dcat:Dataset .
-    ?s ?p ?o
-  }
-}
-`;
+import {
+  prefixes,
+  retrieveDatasetsQueryString,
+  retrieveDatasetMetadata,
+  retrieveDatasetMetadataQueryString,
+} from "./helpers/generics";
+import {
+  endpoint,
+  triplyDBBindings,
+  rattBindings,
+  externBindings,
+  constructQueries,
+} from "./helpers/etl-helpers";
+import { forEachiterator, externalSPARQL } from "./helpers/ratt-helpers";
 
 // Record
 const datasetIri = "?datasetIri";
 const dataUrl = "?dataUrl";
-const dataFormat = "?dataFormat";
 const dataService = "?dataService";
 const instanties = "?instanties";
-const dataserviceType = "?type";
+const dsType = "?type";
+const datasetRegister = "?datasetRegister";
 // Misc
-const applicationSPARQLQuery = "application/sparql-query";
-const triplyDBService = "default";
-const contentLength = "content-length";
-const datasetRegister =
+
+const datasetRegisterValue =
   "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry";
 // sources
-
+const reportGraph = prefixes.defaultGraph("violationReport");
 const sources = {
   dcatShapes: Ratt.Source.file(
     "./rdf/informatieModellen/shacl_dataset_dump_dcat.ttl"
@@ -128,7 +35,10 @@ const sources = {
   schemaShapes: Ratt.Source.file(
     "./rdf/informatieModellen/shacl_dataset_dump_schema.ttl"
   ),
-  datasetCatalog: Ratt.Source.url(datasetRegister, {
+  edmShapes: Ratt.Source.file(
+    "./rdf/informatieModellen/shacl_edm.ttl"
+  ),
+  datasetCatalog: Ratt.Source.url(datasetRegisterValue, {
     request: {
       headers: {
         accept: "text/tab-separated-values",
@@ -145,12 +55,16 @@ const destinations = {
     truncateGraphs: true,
     synchronizeServices: true,
   }),
+  dataset: Ratt.Destination.TriplyDb.rdf("dataset", {
+    truncateGraphs: true,
+    synchronizeServices: true,
+  }),
 };
 
 export default async function (cliContext: CliContext): Promise<Ratt> {
   // RATT context
   const app = new Ratt({
-    defaultGraph: defaultGraph,
+    defaultGraph: prefixes.defaultGraph,
     cliContext: cliContext,
     prefixes: prefixes,
     sources: sources,
@@ -168,23 +82,20 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   // TD issue: https://issues.triply.cc/issues/5616
   // Inladen van de metadata van de datasets die in de dataset catalogus van NDE beschikbaar zijn.
   app.use(
-    addMwCallSiteToError(async function executeQuery(ctx, next) {
-      const parser = new Parser();
-      const query = retrieveDatasetMetadataQueryString.replace(
-        "?dataset",
-        ctx.getString(datasetIri)
-      );
-      const response = await fetch(`${datasetRegister}`, {
-        headers: {
-          accept: "application/trig",
-          "content-type": "application/x-www-form-urlencoded",
-        },
-        body: `query=${encodeURIComponent(query)}`,
-        method: "POST",
-      });
-      ctx.store.addQuads(parser.parse(await response.text()));
-      return next();
-    })
+    mw.add({
+      key: retrieveDatasetMetadata,
+      value: (ctx) => {
+        return retrieveDatasetMetadataQueryString.replace(
+          "?dataset",
+          ctx.getString(datasetIri)
+        );
+      },
+    }),
+    mw.add({
+      key: datasetRegister,
+      value: (_ctx) => datasetRegisterValue,
+    }),
+    externalSPARQL(datasetRegister, retrieveDatasetMetadata)
   );
 
   // validatie van de metadata van de datasets
@@ -200,163 +111,67 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
       // Reset de store om leeg te beginnen voor het inhoudelijke gedeelte.
       mw.resetStore(),
       // Aanmaken van de SPARQL interface om de bevragingen over uit te voeren.
-      mw.add({
-        key: dataService,
-        value: async (ctx) => {
-          // Ophalen endpoint als deze al aangemaakt is.
-          try {
-            if (ctx.getString(dataFormat) === applicationSPARQLQuery) {
-              ctx.record[dataserviceType] = "extern";
-              return ctx.getString(dataUrl).replace("<", "").replace(">", "");
-            }
-          } catch (error: any) {
-            console.warn(
-              error.message,
-              `External SPARQL endpoint from dataset ${ctx.record[datasetIri]} is not available or failed to return correct SPARQL`
-            );
-            return;
-          }
-          try {
-            const head = await fetch(`${ctx.getString(dataUrl).replace("<", "").replace(">", "")}`, {
-              method: "HEAD",
-            });
-            const size = head.headers.get(contentLength);
-            if (size && +size < 20000000) {
-              // ToDo: set appropiate limiet.
-              const parser = new Parser();
-              const datasetStore = ctx.app.getNewStore();
-              const response = await fetch(
-                `${ctx.getString(dataUrl).replace("<", "").replace(">", "")}`
-              );
-              if (response.body) {
-                const rdfStream:any = response.body;
-                let extension = path.extname(ctx.getString(dataUrl).replace("<", "").replace(">", ""));
-                let compression: CompressionType
-                if (extension === ".gz") {
-                  compression = "gz";
-                } else if (head.headers.get("Content-Encoding") === "application/gzip") {
-                  compression = "gz";
-                }
-                datasetStore.addQuads(parser.parse(await streamToString(rdfStream,compression)));
-                ctx.record[dataserviceType] = "RATT";
-                return datasetStore;
-              }
-            }
-          } catch (error: any) {
-            console.warn(
-              error.message,
-              `RATT SPARQL endpoint from dataset ${ctx.record[datasetIri]} could not be created`
-            );
-          }
-          const account = await ctx.app.triplyDb.getAccount();
-          const dataset = await account.ensureDataset(
-            md5(ctx.getString(datasetIri))
-          );
-          try {
-            // inladen van de data als deze nog niet bestaat.
-            // Altijd inladen of alleen als er nog niets staat?
-            if((await dataset.getInfo()).graphCount === 0){
-              await dataset.importFromUrls(ctx.getString(dataUrl).replace("<", "").replace(">", ""));
-            }
-            // Aanmaken endpoint als deze nog niet bestaat.
-            await ensure_service(dataset, triplyDBService);
-            ctx.record[dataserviceType] = "TriplyDB";
-            return dataset;
-          } catch (error) {
-            console.warn(
-              `TriplyDB SPARQL endpoint from dataset ${ctx.record[datasetIri]} could not created, see ${(await dataset.getInfo()).displayName} for more info`
-            );
-          }
-        },
-      }),
+      mw.add({ key: dataService, value: endpoint }),
     ])
   );
 
   app.use(
     mw.when(
-      (ctx) =>
-        ctx.isNotEmpty(dataserviceType) &&
-        ctx.getString(dataserviceType) === "TriplyDB",
+      (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "TriplyDB",
       // Ophalen instanties
-      mw.add({
-        key: instanties,
-        value: async (ctx) => {
-          // Part 4: Store a SPARQL query.
-          const account = await ctx.app.triplyDb.getAccount();
-          const dataset = ctx.get(dataService);
-          //TD <https://issues.triply.cc/issues/5782>
-          const query = await ensure_query(account, retrieveInstancesName, {
-            queryString: retrieveInstances,
-            dataset: dataset,
-          });
-          return query.results().bindings();
-        },
-      }),
-      forEachiterator(instanties,
-        (ctx,next)=>{
-          console.log(ctx.record)
-          return next()
-        }
-      )
+      mw.add({ key: instanties, value: triplyDBBindings }),
+      forEachiterator(instanties, [
+        mw.add({
+          key: "instance",
+          value: (ctx) => {
+            return "<" + ctx.getString("uri") + ">";
+          },
+        }),
+        constructQueries("TriplyDB"),
+        mw.validateShacl([app.sources.edmShapes], {
+          report: { destination: app.destinations.report, graph: reportGraph },
+          terminateOn: false,
+        }),
+        mw.toRdf(app.destinations.dataset)
+      ])
     ),
     mw.when(
-      (ctx) =>
-        ctx.isNotEmpty(dataserviceType) &&
-        ctx.getString(dataserviceType) === "RATT",
+      (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "RATT",
       // Ophalen instanties
-      mw.add({
-        key: instanties,
-        value: async (ctx) => {
-          let queryResult: IQueryResult;
-          const engine = newEngine()
-          try {
-            queryResult = await engine.query(retrieveInstances, {
-              sources: [ctx.get(dataService)],
-            });
-          } catch (e) {
-            if (e instanceof Error && e.message.startsWith("Parse error")) {
-              e.message = "Failed to parse query: " + e.message;
-            }
-            throw e;
-          }
-
-          if (queryResult.type === "bindings") {
-            return queryResult.bindings()
-          }
-          return null
-        },
-      }),
-      forEachiterator(instanties,
-
-      )
+      mw.add({ key: instanties, value: rattBindings }),
+      forEachiterator(instanties, [
+        mw.add({
+          key: "instance",
+          value: (ctx) => {
+            return "<" + ctx.getString("_root.entries[0][1].value") + ">";
+          },
+        }),
+        constructQueries("RATT"),
+        mw.validateShacl([app.sources.edmShapes], {
+          report: { destination: app.destinations.report, graph: reportGraph },
+          terminateOn: false,
+        }),
+        mw.toRdf(app.destinations.dataset)
+      ])
     ),
     mw.when(
-      (ctx) =>
-        ctx.isNotEmpty(dataserviceType) &&
-        ctx.getString(dataserviceType) === "extern",
+      (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "extern",
       // Ophalen instanties
-      mw.add({
-        key: instanties,
-        value: async (ctx) => {
-          const response = await fetch(`${ctx.get(dataService)}`, {
-            headers: {
-              "content-type": "application/x-www-form-urlencoded",
-              accept: "text/tab-separated-values",
-            },
-            body: `query=${encodeURIComponent(retrieveInstances)}`,
-            method: "POST",
-          });
-          if (response.body) {
-            return new Pumpify.obj(response.body as any, parse());
-          }
-        },
-      }),
-      forEachiterator(instanties,
-        (ctx,next)=>{
-          console.log(ctx.record)
-          return next()
-        }
-      )
+      mw.add({ key: instanties, value: externBindings }),
+      forEachiterator(instanties, [
+        mw.add({
+          key: "instance",
+          value: (ctx) => {
+            return "<" + ctx.getString("uri") + ">";
+          },
+        }),
+        constructQueries("extern"),
+        mw.validateShacl([app.sources.edmShapes], {
+          report: { destination: app.destinations.report, graph: reportGraph },
+          terminateOn: false,
+        }),
+        mw.toRdf(app.destinations.dataset)
+      ]),
     )
   );
 

@@ -10,7 +10,7 @@ PREFIX edm:     <http://www.europeana.eu/schemas/edm/>
 PREFIX ore:     <http://www.openarchives.org/ore/terms/>
 
 CONSTRUCT {
-    ?uri_cho a edm:ProvidedCHO ;
+    ?id a edm:ProvidedCHO ;
          edm:type ?edm_type ;
          dc:creator ?creator ;
          dc:description ?description ;
@@ -20,10 +20,10 @@ CONSTRUCT {
          dcterms:spatial ?uri_spatial ;
          dcterms:temporal ?temporal ;
          dcterms:extent ?extent ;
-         dcterms:medium ?material .   
+         dcterms:medium ?material .
 
     ?uri_ore a ore:Aggregation ;
-         edm:aggregatedCHO ?uri_cho ;
+         edm:aggregatedCHO ?id ;
          edm:provider ?provider ;
          edm:dataProvider ?dataProvider ;
          edm:rights ?license ;
@@ -33,7 +33,7 @@ CONSTRUCT {
      #?uri_thes a skos:Concept ;
      #    skos:prefLabel ?prefLabel ;
      #    skos:broader ?broader ;
-     #    skos:altLabel ?altLabel ; 
+     #    skos:altLabel ?altLabel ;
      #    skos:exactMatch ?exactMatch ;
      #    skos:inScheme ?inScheme ;
      #    skos:narrower ?narrower ;
@@ -42,34 +42,34 @@ CONSTRUCT {
 }
 WHERE {
      {
-      ?uri_cho a dcterms:PhysicalResource ;
-               edm:type ?edm_type ;        
+      ?id a dcterms:PhysicalResource ;
+               edm:type ?edm_type ;
                edm:isShownAt ?url ;
                edm:isShownBy ?isShownBy ;
                edm:provider ?dataProvider .
 
-      # Generate an "URI_CHO#agg" URI pointing to a ore:Aggregation resource. 
-      BIND( URI(CONCAT(STR(?uri_cho),"#agg")) as ?uri_ore)
+      # Generate an "URI_CHO#agg" URI pointing to a ore:Aggregation resource.
+      BIND( URI(CONCAT(STR(?id),"#agg")) as ?uri_ore)
 
       # NOTE: The VAR_PROVIDER will be replaced during runtime by the starter.sh script.
       # Europeana requires the provider value to be specified through the aggregation process.
       BIND( STR('VAR_PROVIDER') as ?provider)
 
-      OPTIONAL { ?uri_cho dc:creator ?creator }
-      OPTIONAL { ?uri_cho dc:description ?description }
-      OPTIONAL { ?uri_cho dc:subject ?uri_subject }
-      OPTIONAL { ?uri_cho edm:object ?uri_subject }
-      OPTIONAL { ?uri_cho dc:title ?name }
-      OPTIONAL { ?uri_cho edm:rights ?license }
-      OPTIONAL { ?uri_cho dcterms:extent ?extent }
-      OPTIONAL { ?uri_cho dc:type ?dc_type }
-      OPTIONAL { ?uri_cho dcterms:spatial ?uri_spatial }
-      OPTIONAL { ?uri_cho dcterms:created ?temporal }
-      OPTIONAL { ?uri_cho dcterms:medium ?material }
+      OPTIONAL { ?id dc:creator ?creator }
+      OPTIONAL { ?id dc:description ?description }
+      OPTIONAL { ?id dc:subject ?uri_subject }
+      OPTIONAL { ?id edm:object ?uri_subject }
+      OPTIONAL { ?id dc:title ?name }
+      OPTIONAL { ?id edm:rights ?license }
+      OPTIONAL { ?id dcterms:extent ?extent }
+      OPTIONAL { ?id dc:type ?dc_type }
+      OPTIONAL { ?id dcterms:spatial ?uri_spatial }
+      OPTIONAL { ?id dcterms:created ?temporal }
+      OPTIONAL { ?id dcterms:medium ?material }
       BIND( IF(BOUND(?name),?name,"geen titel") as ?title )
-    }  
+    }
     UNION{
-      # optional mapping of the thesaurus 
+      # optional mapping of the thesaurus
       # no mapping needed here because the thesaurus is fully compliant with Europeana mapping rules
       #?uri_thes a skos:Concept .
       #OPTIONAL { ?uri_thes skos:broader ?broader }
@@ -82,5 +82,3 @@ WHERE {
       #OPTIONAL { ?uri_thes skos:prefLabel ?prefLabel }
     }
 }
-
-	
