@@ -42,10 +42,10 @@ const sources = {
     request: {
       headers: {
         accept: "text/tab-separated-values",
-        "content-type": "application/x-www-form-urlencoded",
+        "content-type": "application/sparql-query",
       },
-      body: `query=${encodeURIComponent(retrieveDatasetsQueryString)}`,
-      method: "POST",
+      body: retrieveDatasetsQueryString,
+      method: "post",
     },
   }),
 };
