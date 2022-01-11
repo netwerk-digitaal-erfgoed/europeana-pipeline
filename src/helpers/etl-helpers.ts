@@ -231,10 +231,10 @@ export async function rattBindings(ctx: Context) {
 export async function externBindings(ctx: Context) {
   const response = await fetch(`${ctx.get(dataService)}`, {
     headers: {
-      "content-type": "application/x-www-form-urlencoded",
       accept: "text/tab-separated-values",
+      "content-type": "application/sparql-query",
     },
-    body: `query=${encodeURIComponent(retrieveInstances)}`,
+    body: retrieveInstances,
     method: "POST",
   });
   if (response.body) {
