@@ -61,9 +61,9 @@ export function externalSPARQL(endpointKey: string, queryKey: string) {
     const response = await fetch(`${url}`, {
       headers: {
         accept: "text/turtle",
-        "content-type": "application/x-www-form-urlencoded",
+        "content-type": "application/sparql-query",
       },
-      body: `query=${encodeURIComponent(query)}`,
+      body: query,
       method: "POST",
     });
     const text = await response.text()
