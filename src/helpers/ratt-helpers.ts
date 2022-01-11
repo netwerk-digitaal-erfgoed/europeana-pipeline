@@ -7,7 +7,6 @@ import { Ratt, Middleware, MiddlewareList } from "@triply/ratt";
 import { composeMiddlewares, DispatchFn } from "@triply/ratt/lib/Ratt";
 import { addMwCallSiteToError } from "@triply/ratt/lib/utils";
 import { assertIsObject } from "@triply/ratt/lib/utils/asserts";
-import { ensure_query } from "./triplydb-helpers";
 import mw from "@triply/ratt/lib/middlewares";
 import { Literal, NamedNode, PrefixedToIri } from "n3";
 import { flattenDeep } from "lodash";
@@ -102,20 +101,7 @@ export function rattSPARQL(endpointKey: string, queryKey: string) {
   });
 }
 
-export function triplyDBSPARQL(endpointKey: string, queryKey: string) {
-  return addMwCallSiteToError(async function executeQuery(ctx, next) {
-    // Part 4: Store a SPARQL query.
-    const account = await ctx.app.triplyDb.getAccount();
-    const dataset = ctx.get(endpointKey);
-    //TD <https://issues.triply.cc/issues/5782>
-    const query = await ensure_query(account, queryKey, {
-      queryString: ctx.getString(queryKey),
-      dataset: dataset,
-    });
-    ctx.store.addQuads(await query.results().statements().toArray());
-    return next();
-  });
-}
+
 
 /**
  * Enriches the data model in the given graph.

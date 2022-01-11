@@ -12,6 +12,7 @@ import {
   rattBindings,
   externBindings,
   constructQueries,
+  ensureQueries
 } from "./helpers/etl-helpers";
 import { forEachiterator, externalSPARQL } from "./helpers/ratt-helpers";
 
@@ -119,14 +120,9 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
     mw.when(
       (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "TriplyDB",
       // Ophalen instanties
+      ensureQueries(),
       mw.add({ key: instanties, value: triplyDBBindings }),
       forEachiterator(instanties, [
-        mw.add({
-          key: "instance",
-          value: (ctx) => {
-            return "<" + ctx.getString("uri") + ">";
-          },
-        }),
         constructQueries("TriplyDB"),
         mw.validateShacl([app.sources.edmShapes], {
           report: { destination: app.destinations.report, graph: reportGraph },

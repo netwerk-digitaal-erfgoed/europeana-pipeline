@@ -2,7 +2,8 @@ import { Context } from "@triply/ratt";
 const md5 = require("md5");
 import { Parser } from "n3";
 import { ensure_service, ensure_query } from "./triplydb-helpers";
-import { rattSPARQL, triplyDBSPARQL, externalSPARQL } from "./ratt-helpers";
+import { rattSPARQL, externalSPARQL } from "./ratt-helpers";
+import { addMwCallSiteToError } from "@triply/ratt/lib/utils";
 import {
   retrieveInstances,
   retrieveInstancesName,
@@ -40,6 +41,18 @@ const dataService = "?dataService";
 export declare type CompressionType = "gz" | undefined;
 
 export function constructQueries(type: "TriplyDB" | "RATT" | "extern") {
+  return [
+    mw.when((_ctx)=> type!= "TriplyDB",_constructQueries()),
+    sparql("$parent." + dataService, eccbooks2edm, type),
+    sparql("$parent." + dataService, eccucfix2edm, type),
+    sparql("$parent." + dataService, finnabooks2edm, type),
+    sparql("$parent." + dataService, ksamsok2edm, type),
+    sparql("$parent." + dataService, nmvw2edm, type),
+    sparql("$parent." + dataService, schema2edm, type),
+  ];
+}
+
+export function _constructQueries() {
   return [
     mw.add({
       key: eccbooks2edm,
@@ -91,13 +104,90 @@ export function constructQueries(type: "TriplyDB" | "RATT" | "extern") {
           ctx.getString("instance")
         );
       },
+    })
+  ];
+}
+
+export function ensureQueries() {
+  return [
+    mw.add({
+      key: eccbooks2edm,
+      value: async (ctx: Context) => {
+        const account = await ctx.app.triplyDb.getAccount();
+        const dataset = ctx.get(dataService);
+        return await ensure_query(account, eccbooks2edm, {
+          queryString: eccbooks2edmQueryString,
+          dataset: dataset,
+          output:"raw",
+          variables: [{name:"id",termType:"NamedNode"} ]
+        })
+      },
     }),
-    sparql("$parent." + dataService, eccbooks2edm, type),
-    sparql("$parent." + dataService, eccucfix2edm, type),
-    sparql("$parent." + dataService, finnabooks2edm, type),
-    sparql("$parent." + dataService, ksamsok2edm, type),
-    sparql("$parent." + dataService, nmvw2edm, type),
-    sparql("$parent." + dataService, schema2edm, type),
+    mw.add({
+      key: eccucfix2edm,
+      value: async (ctx: Context) => {
+        const account = await ctx.app.triplyDb.getAccount();
+        const dataset = ctx.get(dataService);
+        return await ensure_query(account, eccucfix2edm, {
+          queryString: eccucfix2edmQueryString,
+          dataset: dataset,
+          output:"raw",
+          variables: [{name:"id",termType:"NamedNode"} ]
+        })
+      },
+    }),
+    mw.add({
+      key: finnabooks2edm,
+      value: async (ctx: Context) => {
+        const account = await ctx.app.triplyDb.getAccount();
+        const dataset = ctx.get(dataService);
+        return await ensure_query(account, finnabooks2edm, {
+          queryString: finnabooks2edmQueryString,
+          dataset: dataset,
+          output:"raw",
+          variables: [{name:"id",termType:"NamedNode"} ]
+        })
+      },
+    }),
+    mw.add({
+      key: ksamsok2edm,
+      value: async (ctx: Context) => {
+        const account = await ctx.app.triplyDb.getAccount();
+        const dataset = ctx.get(dataService);
+        return await ensure_query(account, ksamsok2edm, {
+          queryString: ksamsok2edmQueryString,
+          dataset: dataset,
+          output:"raw",
+          variables: [{name:"id",termType:"NamedNode"} ]
+        })
+      },
+    }),
+    mw.add({
+      key: nmvw2edm,
+      value: async (ctx: Context) => {
+        const account = await ctx.app.triplyDb.getAccount();
+        const dataset = ctx.get(dataService);
+        return await ensure_query(account, nmvw2edm, {
+          queryString: nmvw2edmQueryString,
+          dataset: dataset,
+          output:"raw",
+          variables: [{name:"id",termType:"NamedNode"} ]
+        })
+      },
+    }),
+    mw.add({
+      key: schema2edm,
+      value: async (ctx: Context) => {
+        const account = await ctx.app.triplyDb.getAccount();
+        const dataset = ctx.get(dataService);
+        return await ensure_query(account, schema2edm, {
+          queryString: schema2edmQueryString,
+          dataset: dataset,
+          output:"raw",
+          variables: [{name:"id",termType:"NamedNode"} ]
+        })
+      },
+    })
   ];
 }
 
@@ -107,7 +197,7 @@ function sparql(
   type: "TriplyDB" | "RATT" | "extern"
 ) {
   if (type === "TriplyDB") {
-    return triplyDBSPARQL(endpointKey, queryKey);
+    return triplyDBSPARQL(queryKey);
   } else if (type === "RATT") {
     return rattSPARQL(endpointKey, queryKey);
   } else if (type === "extern") {
@@ -116,8 +206,17 @@ function sparql(
   throw Error("incorrect service type");
 }
 
+export function triplyDBSPARQL(queryKey: string) {
+  return addMwCallSiteToError(async function executeQuery(ctx, next) {
+    //TD <https://issues.triply.cc/issues/5782>
+    const query = ctx.get("$parent."+queryKey);
+    ctx.store.addQuads(await query.results({id: ctx.getString("uri")}).statements().toArray());
+    return next();
+  });
+}
+
 export async function endpoint(ctx: Context) {
-  // Ophalen endpoint als deze al aangemaakt is.
+  // Ophalen endpoint als deze niet al aangemaakt is.
   try {
     if (ctx.getString(dataFormat) === applicationSPARQLQuery) {
       ctx.record[dataserviceType] = "extern";
