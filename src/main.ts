@@ -8,11 +8,8 @@ import {
 } from "./helpers/generics";
 import {
   endpoint,
-  triplyDBBindings,
   rattBindings,
-  externBindings,
   constructQueries,
-  ensureQueries
 } from "./helpers/etl-helpers";
 import { forEachiterator, externalSPARQL } from "./helpers/ratt-helpers";
 
@@ -118,20 +115,6 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
 
   app.use(
     mw.when(
-      (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "TriplyDB",
-      // Ophalen instanties
-      ensureQueries(),
-      mw.add({ key: instanties, value: triplyDBBindings }),
-      forEachiterator(instanties, [
-        constructQueries("TriplyDB"),
-        mw.validateShacl([app.sources.edmShapes], {
-          report: { destination: app.destinations.report, graph: reportGraph },
-          terminateOn: false,
-        }),
-        mw.toRdf(app.destinations.dataset)
-      ])
-    ),
-    mw.when(
       (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "RATT",
       // Ophalen instanties
       mw.add({ key: instanties, value: rattBindings }),
@@ -142,7 +125,7 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
             return "<" + ctx.getString("_root.entries[0][1].value") + ">";
           },
         }),
-        constructQueries("RATT"),
+        constructQueries(),
         mw.validateShacl([app.sources.edmShapes], {
           report: { destination: app.destinations.report, graph: reportGraph },
           terminateOn: false,
@@ -150,25 +133,6 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
         mw.toRdf(app.destinations.dataset)
       ])
     ),
-    mw.when(
-      (ctx) => ctx.isNotEmpty(dsType) && ctx.getString(dsType) === "extern",
-      // Ophalen instanties
-      mw.add({ key: instanties, value: externBindings }),
-      forEachiterator(instanties, [
-        mw.add({
-          key: "instance",
-          value: (ctx) => {
-            return "<" + ctx.getString("uri") + ">";
-          },
-        }),
-        constructQueries("extern"),
-        mw.validateShacl([app.sources.edmShapes], {
-          report: { destination: app.destinations.report, graph: reportGraph },
-          terminateOn: false,
-        }),
-        mw.toRdf(app.destinations.dataset)
-      ]),
-    )
   );
 
   return app;

@@ -4,6 +4,7 @@ PREFIX dcterms: <http://purl.org/dc/terms/>
 PREFIX ksamsok: <http://kulturarvsdata.se/ksamsok#>
 PREFIX bf:      <http://id.loc.gov/ontologies/bibframe/>
 select ?uri ?type WHERE {
+  ?uri a ?type .
   VALUES ?type {
     bf:Instance
     dcterms:PhysicalResource
@@ -25,5 +26,4 @@ select ?uri ?type WHERE {
     sdo:Sculpture
     sdo:VisualArtwork
   }
-  ?uri a ?type .
 }
