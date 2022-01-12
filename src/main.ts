@@ -30,15 +30,6 @@ const datasetRegisterValue =
 // sources
 const reportGraph = prefixes.defaultGraph("violationReport");
 const sources = {
-  dcatShapes: Ratt.Source.file(
-    "./rdf/informatieModellen/shacl_dataset_dump_dcat.ttl"
-  ),
-  schemaShapes: Ratt.Source.file(
-    "./rdf/informatieModellen/shacl_dataset_dump_schema.ttl"
-  ),
-  edmShapes: Ratt.Source.file(
-    "./rdf/informatieModellen/shacl_edm.ttl"
-  ),
   datasetCatalog: Ratt.Source.url(datasetRegisterValue, {
     request: {
       headers: {
@@ -49,6 +40,15 @@ const sources = {
       method: "post",
     },
   }),
+  dcatShapes: Ratt.Source.file(
+    "./rdf/informatieModellen/shacl_dataset_dump_dcat.ttl"
+  ),
+  schemaShapes: Ratt.Source.file(
+    "./rdf/informatieModellen/shacl_dataset_dump_schema.ttl"
+  ),
+  edmShapes: Ratt.Source.file(
+    "./rdf/informatieModellen/shacl_edm.ttl"
+  ),
 };
 
 const destinations = {
