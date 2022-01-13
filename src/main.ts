@@ -3,7 +3,6 @@ import mw from "@triply/ratt/lib/middlewares";
 import {
   prefixes,
   retrieveDatasetsQueryString,
-  retrieveDatasetMetadata,
   retrieveDatasetMetadataQueryString,
   retrieveInstances,
   eccbooks2edm,
@@ -33,7 +32,6 @@ const contentLength = "content-length";
 const datasetIri = "?datasetIri";
 const dataUrl = "?dataUrl";
 const dataService = "?dataService";
-const datasetRegister = "?datasetRegister";
 // Misc
 
 const datasetRegisterValue =
