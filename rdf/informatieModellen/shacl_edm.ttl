@@ -22,14 +22,14 @@ ex:ProvidedCHO a sh:NodeShape ;
     sh:minCount 1 ;
     sh:in ( "TEXT" "VIDEO" "SOUND" "IMAGE" "3D" );
     sh:message "Missing or invalid value for edm:type"];
-  sh:property [  
+  sh:property [
     sh:path [ sh:alternativePath (dc:title dc:description)];
     sh:minCount 1 ;
-    sh:minLength 1 ; # no empty string allowed 
+    sh:minLength 1 ; # no empty string allowed
     sh:message "At least one the following properties should be present: dc:title or dc:description"];
-  sh:property [  
+  sh:property [
     sh:path [ sh:alternativePath (dc:subject dc:type dcterms:spatial dcterms:temporal)];
-    sh:minCount 1 ; 
+    sh:minCount 1 ;
     sh:message "At least one the following properties should be present: dc:subject, dc:type, dcterms:spatial or dcterms:temporal"];
   sh:node [
     sh:node ex:hasLang ;
@@ -37,7 +37,7 @@ ex:ProvidedCHO a sh:NodeShape ;
 
 ex:Aggregation a sh:NodeShape ;
   sh:targetClass ore:Aggregation ;
-  sh:property[
+  sh:property [
     sh:path edm:aggregatedCHO;
     sh:nodeKind sh:IRI ;
     sh:minCount 1;
@@ -47,7 +47,7 @@ ex:Aggregation a sh:NodeShape ;
     sh:path edm:provider;
     sh:nodeKind sh:IRIOrLiteral ;
     sh:minCount 1 ;
-    sh:maxCount 1 ; 
+    sh:maxCount 1 ;
     sh:message "Missing or invalid value for edm:provider" ];
   sh:property [
     sh:path edm:dataProvider;
@@ -60,16 +60,16 @@ ex:Aggregation a sh:NodeShape ;
     sh:nodeKind sh:IRI ;
     sh:minCount 1 ;
     sh:message "Missing or invalid value for edm:rights"];
-  sh:property [  
+  sh:property [
     sh:path [ sh:alternativePath (edm:isShownAt edm:isShownBy)];
     sh:nodeKind sh:IRI ;
-    sh:minCount 1 ; 
+    sh:minCount 1 ;
     sh:message "At least one the following properties should be present: edm:isShownAt or edm:isShownBy and should have a valid URI"];
   sh:property [
     sh:path edm:isShownAt ;
     sh:nodeKind sh:IRI ;
     sh:maxCount 1 ;
-    sh:message "Only one occurence of edm:isShownAt is allowed"];  
+    sh:message "Only one occurence of edm:isShownAt is allowed"];
   sh:property [
     sh:path edm:isShownBy ;
     sh:nodeKind sh:IRI ;

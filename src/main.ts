@@ -1,4 +1,4 @@
-import { Ratt, CliContext, Context } from "@triply/ratt";
+import { Ratt, CliContext, Context, Middleware } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
 import {
   prefixes,
@@ -20,18 +20,18 @@ import {
 } from "./helpers/generics";
 import { IQueryResult } from "@comunica/actor-init-sparql/lib/ActorInitSparql-browser";
 import { newEngine } from "@triply/actor-init-sparql-rdfjs";
+const md5 = require("md5");
 import * as path from "path";
 import { streamToString } from "@triply/ratt/lib/utils/files";
-const md5 = require("md5");
 
 import { Parser } from "n3";
 export declare type CompressionType = "gz" | undefined;
 
 // Record
-const contentLength = "content-length";
 const datasetIri = "?datasetIri";
 const dataUrl = "?dataUrl";
 const dataService = "?dataService";
+const title = "?title";
 // Misc
 
 const datasetRegisterValue =
@@ -85,27 +85,29 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   //    dataUrl: 'http://data.bibliotheken.nl/sparql',
   //    dataFormat: 'application/sparql-query',
   // }
-  pipe1.use(mw.fromCsv(pipe1.sources.datasetCatalog, { delimiter: "\t" }));
-  pipe1.use(
-    async (ctx, next) => {
-      const parser = new Parser();
-      const query = retrieveDatasetMetadataQueryString.replace(
-        "?dataset",
-        ctx.getString(datasetIri)
-      )
-      const response = await fetch(`${datasetRegisterValue}`, {
-        headers: {
-          accept: "text/turtle",
-          "content-type": "application/sparql-query",
-        },
-        body: query,
-        method: "POST",
-      });
-      const text = await response.text()
-      ctx.store.addQuads(parser.parse(text));
-      return next();
-    }
-  );
+  //
+  // TD:  fromRDF https://issues.triply.cc/issues/6179
+
+  pipe1.use(mw.fromCsv(pipe1.sources.datasetCatalog, { delimiter: "\t",quote:"`" }));
+  pipe1.use(async (ctx, next) => {
+    const parser = new Parser();
+    const query = retrieveDatasetMetadataQueryString.replace(
+      "?dataset",
+      ctx.getString(datasetIri)
+    );
+    const response = await fetch(`${datasetRegisterValue}`, {
+      headers: {
+        accept: "text/turtle",
+        "content-type": "application/sparql-query",
+      },
+      body: query,
+      method: "POST",
+    });
+    const text = await response.text();
+    ctx.store.addQuads(parser.parse(text));
+    return next();
+  });
+  //
 
   // validatie van de metadata van de datasets
   pipe1.use(
@@ -116,7 +118,7 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   );
 
   pipe1.use(
-    // Aanmaken van de SPARQL interface om de bevragingen over uit te voeren.
+    // Controleren of we geen lege dataset hebben.
     mw.add({
       key: dataService,
       value: async (ctx) => {
@@ -145,129 +147,141 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
             ctx.store = datasetStore
             return true;
           }
+
         } catch (error: any) {
           console.warn(
             error.message,
             `RATT SPARQL endpoint from dataset ${ctx.record[datasetIri]} could not be created`
           );
-          return false
         }
+        return false;
       },
     }),
-    mw.when(dataService, [
-      async (ctx, next) => {
-        const graph = ctx.getString(datasetIri).replace("<", "").replace(">", "")
-        const mainStore = ctx.store
-        const pipe2 = new Ratt({
-          defaultGraph: graph,
-          cliContext: cliContext,
-          sources: sources,
-          destinations: {
-            dataset: Ratt.Destination.TriplyDb.rdf(md5(ctx.getString(dataUrl)),{overwrite:true}),
-          },
-        });
-        let queryResult: IQueryResult;
-        const engine = newEngine();
-        try {
-          queryResult = await engine.query(retrieveInstances, {
-            sources: [mainStore],
-          });
-        } catch (e) {
-          if (e instanceof Error && e.message.startsWith("Parse error")) {
-            e.message = "Failed to parse query: " + e.message;
-          }
-          throw e;
-        }
-        if (queryResult.type === "bindings") {
-          pipe2.use(
-            mw.fromJson(await queryResult.bindings()),
-            (ctx,next)=>{
-              ctx.store = mainStore
-              return next()
-            },
-            mw.add({
-              key: "instance",
-              value: (ctx) => {
-                return "<" + (ctx.record as any).get("?uri").value + ">";
-              },
-            }),
-            mw.add({
-              key: eccbooks2edm,
-              value: (ctx: Context) => {
-                return eccbooks2edmQueryString.replace(
-                  /\?id/g,
-                  ctx.getString("instance")
-                );
-              },
-            }),
-            mw.add({
-              key: eccucfix2edm,
-              value: (ctx: Context) => {
-                return eccucfix2edmQueryString.replace(
-                  /\?id/g,
-                  ctx.getString("instance")
-                );
-              },
-            }),
-            mw.add({
-              key: finnabooks2edm,
-              value: (ctx: Context) => {
-                return finnabooks2edmQueryString.replace(
-                  /\?id/g,
-                  ctx.getString("instance")
-                );
-              },
-            }),
-            mw.add({
-              key: ksamsok2edm,
-              value: (ctx: Context) => {
-                return ksamsok2edmQueryString.replace(
-                  /\?id/g,
-                  ctx.getString("instance")
-                );
-              },
-            }),
-            mw.add({
-              key: nmvw2edm,
-              value: (ctx: Context) => {
-                return nmvw2edmQueryString.replace(/\?id/g, ctx.getString("instance"));
-              },
-            }),
-            mw.add({
-              key: schema2edm,
-              value: (ctx: Context) => {
-                return schema2edmQueryString.replace(
-                  /\?id/g,
-                  ctx.getString("instance")
-                );
-              },
-            }),
-            mw.sparqlConstruct((ctx)=>ctx.getString(eccbooks2edm)),
-            mw.sparqlConstruct((ctx)=>ctx.getString(eccucfix2edm)),
-            mw.sparqlConstruct((ctx)=>ctx.getString(finnabooks2edm)),
-            mw.sparqlConstruct((ctx)=>ctx.getString(ksamsok2edm)),
-            mw.sparqlConstruct((ctx)=>ctx.getString(nmvw2edm)),
-            mw.sparqlConstruct((ctx)=>ctx.getString(schema2edm)),
-            mw.validateShacl([pipe2.sources.edmShapes], {graphs: [graph],
-              report: {
-                destination: pipe2.destinations.dataset,
-                graph: reportGraph,
-              },
-              log: false,
-              terminateOn: false,
-            }),
-            mw.toRdf(pipe2.destinations.dataset, {includeGraphs: [graph]})
-          );
-          pipe2.after(()=>{
-            pipe2
-          })
-          await pipe2.run();
-        }
-        return next();
-      },
-    ],
-  mw.logRecord())
+    mw.when((ctx)=>ctx.getBoolean(dataService), subETL(cliContext))
   );
 
   return pipe1;
+}
+
+function subETL(cliContext: CliContext): Middleware {
+  return async (ctx, next) => {
+    const url = ctx.getString(dataUrl).replace("<", "").replace(">", "")
+    const graph = ctx.getString(datasetIri).replace("<", "").replace(">", "");
+    const edmGraph = ctx.getString(datasetIri).replace("<", "").replace(">", "")+"edm";
+    const mainStore = ctx.store
+    const pipe2 = new Ratt({
+      defaultGraph: graph,
+      cliContext: cliContext,
+      sources: {...sources,dataset: Ratt.Source.url(url)},
+      destinations: {
+        dataset: Ratt.Destination.TriplyDb.rdf(ctx.getString(title).toLowerCase().replace(/[^a-zA-Z0-9]+(.)/g,(_m,chr)=>chr.toUpperCase()).substring(0,35), {
+          overwrite: true,
+        }),
+      },
+    });
+
+    // TD: https://issues.triply.cc/issues/6180
+    //
+    await pipe2.sources.dataset.copy(pipe2, pipe2.destinations.dataset)
+
+    let queryResult: IQueryResult;
+    const engine = newEngine();
+    try {
+      queryResult = await engine.query(retrieveInstances, {
+        sources: [mainStore],
+      });
+    } catch (e) {
+      if (e instanceof Error && e.message.startsWith("Parse error")) {
+        e.message = "Failed to parse query: " + e.message;
+      }
+      throw e;
+    }
+    if (queryResult.type === "bindings") {
+      pipe2.use(mw.fromJson(await queryResult.bindings()));
+    }
+
+    pipe2.use(
+      mw.loadRdf(pipe2.sources.dataset),
+      mw.add({
+        key: "instance",
+        value: (ctx) => {
+          return "<" + (ctx.record as any).get("?uri").value + ">";
+        },
+      }),
+      mw.add({
+        key: eccbooks2edm,
+        value: (ctx: Context) => {
+          return eccbooks2edmQueryString.replace(
+            /\?id/g,
+            ctx.getString("instance")
+          );
+        },
+      }),
+      mw.add({
+        key: eccucfix2edm,
+        value: (ctx: Context) => {
+          return eccucfix2edmQueryString.replace(
+            /\?id/g,
+            ctx.getString("instance")
+          );
+        },
+      }),
+      mw.add({
+        key: finnabooks2edm,
+        value: (ctx: Context) => {
+          return finnabooks2edmQueryString.replace(
+            /\?id/g,
+            ctx.getString("instance")
+          );
+        },
+      }),
+      mw.add({
+        key: ksamsok2edm,
+        value: (ctx: Context) => {
+          return ksamsok2edmQueryString.replace(
+            /\?id/g,
+            ctx.getString("instance")
+          );
+        },
+      }),
+      mw.add({
+        key: nmvw2edm,
+        value: (ctx: Context) => {
+          return nmvw2edmQueryString.replace(
+            /\?id/g,
+            ctx.getString("instance")
+          );
+        },
+      }),
+      mw.add({
+        key: schema2edm,
+        value: (ctx: Context) => {
+          return schema2edmQueryString.replace(
+            /\?id/g,
+            ctx.getString("instance")
+          );
+        },
+      }),
+      mw.sparqlConstruct((ctx) => ctx.getString(eccbooks2edm),{toGraph: edmGraph}),
+      mw.sparqlConstruct((ctx) => ctx.getString(eccucfix2edm),{toGraph: edmGraph}),
+      mw.sparqlConstruct((ctx) => ctx.getString(finnabooks2edm),{toGraph: edmGraph}),
+      mw.sparqlConstruct((ctx) => ctx.getString(ksamsok2edm),{toGraph: edmGraph}),
+      mw.sparqlConstruct((ctx) => ctx.getString(nmvw2edm),{toGraph: edmGraph}),
+      mw.sparqlConstruct((ctx) => ctx.getString(schema2edm),{toGraph: edmGraph}),
+      mw.validateShacl([pipe2.sources.edmShapes], {
+        graphs: [edmGraph],
+        report: {
+          destination: pipe2.destinations.dataset,
+          graph: reportGraph,
+        },
+        log: false,
+        terminateOn: false,
+      }),
+      mw.toRdf(pipe2.destinations.dataset, { includeGraphs: [edmGraph] })
+    );
+
+    await pipe2.run();
+
+    return next();
+  };
 }

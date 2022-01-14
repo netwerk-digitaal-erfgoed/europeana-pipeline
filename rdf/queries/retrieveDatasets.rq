@@ -1,7 +1,7 @@
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
-select ?datasetIri ?dataUrl ?dataFormat ?size where {
+select ?datasetIri ?dataUrl ?dataFormat ?size ?title where {
     {
         select ?datasetIri (max(?score) as ?maxScore) where {
             {
@@ -21,6 +21,7 @@ select ?datasetIri ?dataUrl ?dataFormat ?size where {
         } group by ?datasetIri
     }
     ?datasetIri dcat:distribution ?distribution .
+    ?datasetIri dct:title ?title .
     ?distribution dcat:accessURL ?dataUrl .
     optional {
         ?distribution dcat:byteSize ?size_ .
