@@ -1,0 +1,179 @@
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dc:      <http://purl.org/dc/elements/1.1/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX schema:  <http://schema.org/>
+PREFIX edm:     <http://www.europeana.eu/schemas/edm/>
+PREFIX ore:     <http://www.openarchives.org/ore/terms/>
+CONSTRUCT {
+  ?uri_cho a edm:ProvidedCHO ;
+    edm:type ?edm_type ;
+    dc:creator ?creator ;
+    dc:description ?description ;
+    dc:type ?genre ;
+    dc:subject ?subject ;
+    dc:title ?name ;
+    dcterms:alternative ?altName ;
+    dc:publisher ?publisher ;
+    owl:sameAs ?sameAs ;
+    dcterms:spatial ?spatial ;
+    dcterms:temporal ?temporal ;
+    dc:language "el" ;
+    dcterms:medium ?material .
+  ?uri_ore a ore:Aggregation ;
+    edm:aggregatedCHO ?id ;
+    edm:provider ?provider ;
+    edm:dataProvider ?dataProvider ;
+    edm:rights ?license ;
+    edm:isShownBy ?isShownBy ;
+    edm:isShownAt ?isShownAt .
+  ?uri_org a edm:Agent ;
+    skos:prefLabel ?org_name ;
+    skos:note ?org_desc .
+  ?uri_ag a edm:Agent ;
+    skos:prefLabel ?pers_name ;
+    skos:altLabel ?pers_additionalName ;
+    edm:begin ?pers_birthDate ;
+    edm:end ?pers_deathDate .
+  ?uri_pl a edm:Place ;
+    skos:prefLabel ?pl_name ;
+    skos:altLabel ?pl_alternateName ;
+    owl:sameAs ?pl_sameAs .
+}
+WHERE {
+  {
+    {
+      bind(?id as ?uri_cho)
+      ?id a ?type .
+      VALUES ?type {
+        schema:Sculpture schema:VisualArtwork schema:Painting schema:Photograph
+      }
+      BIND(("IMAGE") as ?edm_type)
+    }
+    UNION
+    {
+      bind(?id as ?uri_cho)
+      ?id a schema:Book .
+      BIND(("TEXT") as ?edm_type)
+    }
+    # Generate an "URI_CHO#agg" URI pointing to a ore:Aggregation resource.
+    BIND( URI(CONCAT(STR(?id),"#agg")) as ?uri_ore)
+    # NOTE: The VAR_PROVIDER will be replaced during runtime by the starter.sh script.
+    # Europeana requires the provider value to be specified through the aggregation process.
+    BIND( STR('VAR_PROVIDER') as ?provider)
+    OPTIONAL {
+      ?id schema:creator ?creator
+    }
+    OPTIONAL {
+      ?id schema:description ?description
+    }
+    OPTIONAL {
+      ?id schema:genre ?genre .
+      FILTER (lang( ?genre) = "en")
+      BIND(str(?genre) as ?dc_genre)
+    }
+    OPTIONAL {
+      ?id schema:keywords ?subject
+    }
+    OPTIONAL {
+      ?id schema:about ?subject
+    }
+    OPTIONAL {
+      ?id schema:license ?cho_license
+    }
+    OPTIONAL {
+      ?id schema:name ?name
+    }
+    OPTIONAL {
+      ?id schema:alternateName ?altName
+    }
+    OPTIONAL {
+      # use a default the provider mentioned in the dataset description, if any...
+      ?dataset void:rootResource ?id .
+      ?dataset schema:provider ?dataProvider .
+    }
+    OPTIONAL {
+      # use as default the license statement mentioned in the dataset description, if any...
+      ?dataset void:rootResource ?id .
+      ?dataset schema:license ?dataset_license .
+    }
+    OPTIONAL {
+      # use the provider from the resource description
+      ?id schema:provider ?dataProvider
+    }
+    OPTIONAL {
+      ?id schema:publisher ?publisher
+    }
+    OPTIONAL {
+      ?id schema:sameAs ?sameAs
+    }
+    OPTIONAL {
+      ?id schema:spatial ?spatial
+    }
+    OPTIONAL {
+      ?id schema:temporal ?temporal
+    }
+    OPTIONAL {
+      ?id schema:material ?material
+    }
+    OPTIONAL {
+      # Europeana requires valid URI for edm:isShownAt
+      ?id schema:url ?url
+      BIND(IRI(?url) as ?isShownAt)
+    }
+    OPTIONAL {
+      # Europeana requires valid URI for edm:isShownBy
+      ?id schema:image ?image
+      BIND(IRI(?image) as ?isShownBy)
+    }
+    BIND(COALESCE(IRI(?cho_license),IRI(?dataset_license),"no license info") as ?license)
+  }
+  UNION
+  {
+    bind(?id as ?uri_org)
+    ?id a schema:Organization .
+    OPTIONAL {
+      ?id schema:name ?org_name
+    }
+    OPTIONAL {
+      ?id schema:description ?org_desc
+    }
+  }
+  UNION
+  {
+    bind(?id as ?uri_ag)
+    ?id a schema:Person .
+    OPTIONAL {
+      ?id schema:name ?pers_name
+    }
+    OPTIONAL {
+      ?id schema:additionalName ?pers_additionalName
+    }
+    OPTIONAL {
+      ?id schema:birthDate ?pers_birthDate
+    }
+    OPTIONAL {
+      ?id schema:deathDate ?pers_deathDate
+    }
+    OPTIONAL {
+      ?id schema:description ?pers_desc
+    }
+  }
+  UNION
+  {
+    bind(?id as ?uri_pl)
+    ?id a schema:Place .
+    OPTIONAL {
+      ?id schema:name ?pl_name
+    }
+    OPTIONAL {
+      ?id schema:alternateName ?pl_alternateName
+    }
+    OPTIONAL {
+      ?id schema:sameAs ?pl_sameAs
+    }
+  }
+}

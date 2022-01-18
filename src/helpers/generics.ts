@@ -5,17 +5,34 @@ import * as fs from 'fs-extra'
 const defaultGraph = Ratt.prefixer(
   "https://data.netwerkdigitaalerfgoed.nl/edm/"
 );
+const schema = Ratt.prefixer(
+  "http://schema.org/"
+);
+const dcterms = Ratt.prefixer(
+  "http://purl.org/dc/terms/"
+);
+const ksamsok = Ratt.prefixer(
+  "http://kulturarvsdata.se/ksamsok#"
+);
+const bf = Ratt.prefixer(
+  "http://id.loc.gov/ontologies/bibframe/"
+);
 
 export const prefixes = {
   defaultGraph: defaultGraph,
+  schema: schema,
+  dcterms: dcterms,
+  ksamsok: ksamsok,
+  bf: bf,
   ...prefix,
 };
 
-export const retrieveInstancesName = "retrieveInstances";
-export const retrieveInstances = fs.readFileSync('./rdf/queries/retrieveInstances.rq', {encoding: 'utf-8'})
 
 export const retrieveDatasets = "retrieveDatasets";
 export const retrieveDatasetsQueryString = fs.readFileSync('./rdf/queries/retrieveDatasets.rq', {encoding: 'utf-8'})
+
+export const retrieveInstances = "retrieveInstances";
+export const retrieveInstancesQueryString = fs.readFileSync('./rdf/queries/retrieveInstances.rq', {encoding: 'utf-8'})
 
 export const retrieveDatasetMetadata = 'retrieveDatasetMetadata'
 export const retrieveDatasetMetadataQueryString = fs.readFileSync('./rdf/queries/retrieveDatasetMetadata.rq', {encoding: 'utf-8'})

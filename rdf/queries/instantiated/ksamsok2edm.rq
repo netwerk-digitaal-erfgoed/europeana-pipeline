@@ -1,0 +1,150 @@
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX dc:      <http://purl.org/dc/elements/1.1/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+PREFIX foaf:    <http://xmlns.com/foaf/0.1/>
+PREFIX ksamsok: <http://kulturarvsdata.se/ksamsok#>
+PREFIX restype: <http://kulturarvsdata.se/resurser/EntityType#>
+PREFIX edm:     <http://www.europeana.eu/schemas/edm/>
+PREFIX ore:     <http://www.openarchives.org/ore/terms/>
+PREFIX cidoc:   <http://www.cidoc-crm.org/rdfs/cidoc-crm#>
+CONSTRUCT {
+  ?uri_cho a edm:ProvidedCHO ;
+    edm:type ?edm_type ;
+    dc:creator ?creator ;
+    dc:description ?description ;
+    dc:type ?mediaType ;
+    dc:subject ?subject ;
+    dc:title ?name ;
+    dcterms:alternative ?altName ;
+    dcterms:extent ?extent ;
+    dcterms:medium ?material .
+  ?uri_ore a ore:Aggregation ;
+    edm:aggregatedCHO ?id ;
+    edm:provider ?provider ;
+    edm:dataProvider ?dataProvider ;
+    edm:rights ?license ;
+    edm:isShownBy ?isShownBy ;
+    edm:isShownAt ?isShownAt .
+  ?uri_org a edm:Agent ;
+    skos:prefLabel ?org_name ;
+    skos:note ?org_desc .
+  ?uri_ag a edm:Agent ;
+    skos:prefLabel ?pers_name ;
+    edm:begin ?pers_birthDate ;
+    edm:end ?pers_deathDate .
+}
+WHERE {
+  {
+    {
+      bind(?id as ?uri_cho)
+      ?id a ksamsok:Entity .
+      ?id ksamsok:itemType restype:object .
+      ?id ksamsok:serviceName "objects"
+      BIND(("IMAGE") as ?edm_type)
+      # Generate an "URI_CHO#agg" URI pointing to a ore:Aggregation resource.
+      BIND( URI(CONCAT(STR(?id),"#agg")) as ?uri_ore)
+      # NOTE: The VAR_PROVIDER will be replaced during runtime by the starter.sh script.
+      # Europeana requires the provider value to be specified through the aggregation process.
+      BIND( STR('VAR_PROVIDER') as ?provider)
+      OPTIONAL {
+        ?id ksamsok:context ?bn_context .
+        ?bn_context cidoc:P94B.was_created_by ?creator
+      }
+      OPTIONAL {
+        ?id ksamsok:itemDescription ?bn_itemDescription .
+        ?bn_itemDescription ksamsok:desc ?description
+        FILTER(STRLEN(STR(?description))>0)
+      }
+      OPTIONAL {
+        ?id ksamsok:itemKeyWord ?subject
+      }
+      OPTIONAL {
+        ?id ksamsok:itemClassName ?subject
+      }
+      OPTIONAL {
+        ?id ksamsok:mediaType ?mediaType
+      }
+      OPTIONAL {
+        ?id ksamsok:itemLicenseUrl ?license
+      }
+      OPTIONAL {
+        ?id ksamsok:itemLabel ?name
+        FILTER(STRLEN(STR(?name))>0)
+      }
+      OPTIONAL {
+        ?id ksamsok:itemName ?bn_itemName .
+        ?bn_itemName ksamsok:name ?altName
+      }
+      OPTIONAL {
+        ?id ksamsok:serviceOrganization ?dataProvider
+      }
+      OPTIONAL {
+        ?id ksamsok:itemMaterial ?bn_itemMaterial .
+        ?bn_itemMaterial ksamsok:material ?material
+      }
+      OPTIONAL {
+        ?id ksamsok:itemMeasurement ?bn_itemMeasurement .
+        ?bn_itemMeasurement ksamsok:unit ?ext_unit ;
+                            ksamsok:value ?ext_val ;
+                            ksamsok:type ?ext_type .
+        BIND(CONCAT(str(?ext_type),": ",str(?ext_val)," ",str(?ext_unit)) as ?extent)
+      }
+      OPTIONAL {
+        # Europeana requires valid URI for edm:isShownAt
+        ?id ksamsok:url ?url
+        BIND(IRI(?url) as ?isShownAt)
+      }
+      OPTIONAL {
+        {
+          # Europeana requires valid URI for edm:isShownBy
+          select (SAMPLE(?all_isShownBy) as ?isShownBy) where {
+            bind(?id as ?uri)
+            ?id ksamsok:image ?bn_image .
+            ?bn_image ksamsok:highresSource ?image
+            BIND(IRI(?image) as ?all_isShownBy)
+          } group by ?uri
+        }
+      }
+    }
+    UNION
+    {
+      bind(?id as ?uri_org)
+      ?id a ksamsok:Entity .
+      ?id ksamsok:serviceName "agents" .
+      ?id ksamsok:itemType ?agent_type .
+      VALUES ?agent_type {
+        restype:organization restype:group
+      }
+      OPTIONAL {
+        ?id ksamsok:itemLabel ?org_name
+      }
+      OPTIONAL {
+        ?id foaf:title ?org_desc
+      }
+    }
+    UNION
+    {
+      bind(?id as ?uri_ag)
+      ?id a ksamsok:Entity .
+      ?id ksamsok:serviceName "agents" .
+      ?id ksamsok:itemType restype:person .
+      OPTIONAL {
+        ?id ksamsok:itemLabel ?pers_name
+      }
+      OPTIONAL {
+        ?id ksamsok:context ?bn_context .
+        ?bn_context ksamsok:fromTime ?pers_birthDate
+      }
+      OPTIONAL {
+        ?id ksamsok:context ?bn_context .
+        ?bn_context ksamsok:toTime ?pers_deathDate
+      }
+      OPTIONAL {
+        ?id foaf:title ?pers_desc
+      }
+    }
+  }
+}
