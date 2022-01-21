@@ -1,3 +1,0 @@
-select ?uri ?type WHERE {
-  ?uri a ?type .
-}

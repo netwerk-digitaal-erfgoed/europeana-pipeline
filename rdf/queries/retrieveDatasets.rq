@@ -1,7 +1,7 @@
 PREFIX xsd: <http://www.w3.org/2001/XMLSchema#>
 PREFIX dct: <http://purl.org/dc/terms/>
 PREFIX dcat: <http://www.w3.org/ns/dcat#>
-select ?datasetIri ?dataUrl ?dataFormat ?size ?title where {
+select distinct ?datasetIri ?sparqlUrl ?dataUrl ?dataFormat ?size ?title where {
     {
         select ?datasetIri (max(?score) as ?maxScore) where {
             {
@@ -10,6 +10,7 @@ select ?datasetIri ?dataUrl ?dataFormat ?size ?title where {
                 ?distribution dcat:accessURL ?url .
                 ?distribution dct:format ?format.
                 values(?format ?score){
+                    ("application/sparql-query" 1)
                     ("application/trig" 2)
                     ("application/n-quads" 3)
                     ("application/turtle" 4)
@@ -23,10 +24,15 @@ select ?datasetIri ?dataUrl ?dataFormat ?size ?title where {
     ?datasetIri dcat:distribution ?distribution .
     ?datasetIri dct:title ?title .
     ?distribution dcat:accessURL ?dataUrl .
+    ?distribution dct:format ?dataFormat .
     optional {
         ?distribution dcat:byteSize ?size_ .
     }
-    ?distribution dct:format ?dataFormat.
+    optional {
+        ?datasetIri dcat:distribution ?distribution2 .
+        ?distribution2 dcat:accessURL ?sparqlUrl .
+        ?distribution2 dct:format "application/sparql-query".
+    }
     values(?dataFormat ?maxScore){
         ("application/trig" 2)
         ("application/n-quads" 3)
@@ -36,4 +42,4 @@ select ?datasetIri ?dataUrl ?dataFormat ?size ?title where {
         ("application/rdf+xml" 7)
     }
     bind(if((!bound(?size_)||datatype(?size_)!=xsd:integer),856750512,?size_) as ?size)
-} order by ?size
+} order by asc(?size)

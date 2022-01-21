@@ -31,9 +31,6 @@ export const prefixes = {
 export const retrieveDatasets = "retrieveDatasets";
 export const retrieveDatasetsQueryString = fs.readFileSync('./rdf/queries/retrieveDatasets.rq', {encoding: 'utf-8'})
 
-export const retrieveInstances = "retrieveInstances";
-export const retrieveInstancesQueryString = fs.readFileSync('./rdf/queries/retrieveInstances.rq', {encoding: 'utf-8'})
-
 export const retrieveDatasetMetadata = 'retrieveDatasetMetadata'
 export const retrieveDatasetMetadataQueryString = fs.readFileSync('./rdf/queries/retrieveDatasetMetadata.rq', {encoding: 'utf-8'})
 
