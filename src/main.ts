@@ -28,11 +28,20 @@ const datasetIri = "?datasetIri";
 const dataUrl = "?dataUrl";
 const sparqlUrl = "?sparqlUrl";
 const title = "?title";
-const dataserviceType = "?type";
+const size = "?size";
 const dataFormat = "?dataFormat";
 const applicationSPARQLQuery = "application/sparql-query";
 const contentLength = "content-length";
-
+const ratt = "RATT";
+const rattS = "RATT_succeeded";
+const error_ratt = "error_RATT";
+const extern = "extern";
+const extS = "extern_succeeded";
+const error_extern = "error_extern";
+const triplyDb = "triplyDb";
+const triplyDBS = "triplyDb_succeeded";
+const error_triplyDB = "error_triplyDB";
+const ds = "ds"
 // Misc
 
 const datasetRegisterValue =
@@ -60,12 +69,7 @@ const sources = {
 };
 
 const destinations = {
-  report: Ratt.Destination.TriplyDb.rdf("datasetBeschrijvingen", {
-    truncateGraphs: true,
-    synchronizeServices: true,
-  }),
-  dataset: Ratt.Destination.TriplyDb.rdf("dataset", {
-    truncateGraphs: true,
+  dataset: Ratt.Destination.TriplyDb.rdf("datasetBeschrijvingen", {
     synchronizeServices: true,
   }),
 };
@@ -113,35 +117,86 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   //
 
   // validatie van de metadata van de datasets
-  pipe1.use(
-    mw.validateShacl([pipe1.sources.dcatShapes, pipe1.sources.schemaShapes], {
-      report: { destination: pipe1.destinations.report, graph: reportGraph },
-      terminateOn: false,
-    })
-  );
   pipe1.use(endpoint());
+  pipe1.use(mw.when((ctx) => ctx.getBoolean(extern), subETLSPARQL(cliContext)));
   pipe1.use(
     mw.when(
-      (ctx) => ctx.getString(dataserviceType) === "extern",
-      subETLSPARQL(cliContext)
-    )
-  );
-  pipe1.use(
-    mw.when(
-      (ctx) => ctx.getString(dataserviceType) === "RATT",
+      (ctx) => ctx.getBoolean(ratt) && !ctx.get(extS),
       subETLComunica(cliContext)
     )
   );
   pipe1.use(
     mw.when(
-      (ctx) => ctx.getString(dataserviceType) === "TriplyDB",
+      (ctx) => ctx.getBoolean(triplyDb) && !ctx.get(rattS),
       subETLTriplyDB(cliContext)
     )
   );
+  pipe1.use(async (ctx, next) => {
+    const externError = ctx.get(error_extern)?.message
+    const externElem = ctx.getBoolean(extern) ? `extern Endpoint: ${ctx.getString(sparqlUrl).replace("<", "").replace(">", "")} \nExtern ophalen mogelijk: ${ctx.get(extern)} \n${externError ? externError+"\n" : ''}` : ''
+    const localError = ctx.get(error_ratt)?.message
+    const localElem = ctx.getBoolean(ratt) ? `Ratt geslaagd: ${ctx.get(rattS)} \n${localError ? localError+"\n" : ''}` : ''
+    const triplyError = ctx.get(error_triplyDB)?.message
+    const triplyDBElem = (!ctx.get(rattS) && ctx.getBoolean(triplyDb)) ? `TriplyDb geslaagd: ${ctx.get(triplyDBS)} \n${triplyError ? triplyError+"\n" : ''}` : ''
+    let dsInfo = ''
+    try {
+      const acc = await ctx.app.triplyDb.getAccount();
+      const dataSet = await acc.getDataset(ctx.getString(ds));
+      let graphStr = ''
+      for await( const graph of dataSet.getGraphs()){
+        const graphInfo = await graph.getInfo()
+        graphStr += ` - ${graphInfo.graphName}: ${graphInfo.numberOfStatements}\n`
+      }
+      dsInfo = `${ctx.getString(ds)}:\n${graphStr}`
+    } catch(e){
+      // No dataset is created and thus no data is available.
+    }
+    const showcase = `
+title: ${ctx.getString(title)}
+datasetIri: ${ctx.getString(datasetIri).replace("<", "").replace(">", "")}
+grootte: ${ctx.getString(size)}
+data Locatie: ${ctx.getString(dataUrl).replace("<", "").replace(">", "")}
+${externElem}${localElem}${triplyDBElem}${dsInfo}`
 
+    console.log(showcase)
+    return next();
+  });
+  pipe1.use(mw.toRdf(pipe1.destinations.dataset));
   return pipe1;
 }
 
+function endpoint(): Middleware {
+  return async (ctx, next) => {
+    ctx.record[extern] = false;
+    ctx.record[ratt] = false;
+    ctx.record[triplyDb] = true;
+
+    // Ophalen endpoint als deze al aangemaakt is.
+    if (ctx.getString(dataFormat) === applicationSPARQLQuery) {
+      ctx.record[extern] = true;
+    }
+    try {
+      const url = ctx.getString(dataUrl).replace("<", "").replace(">", "");
+      const head = await fetch(url, { method: "HEAD" });
+      const sizeContent = head.headers.get(contentLength);
+      ctx.record["?size"] = sizeContent || ctx.record["?size"]
+      if (sizeContent && +sizeContent < 1500000) {
+        ctx.record[ratt] = true;
+        return next();
+      }
+      if (sizeContent && +sizeContent < 2000000 && !url.endsWith("gz")) {
+        ctx.record[ratt] = true;
+        return next();
+      }
+    } catch (error: any) {
+      console.warn(
+        error.message,
+        `RATT SPARQL endpoint for dataset ${ctx.record[datasetIri]} could not be created`
+      );
+    }
+    return next();
+  };
+}
 
 function subETLSPARQL(cliContext: CliContext): Middleware {
   return async (ctx, next) => {
@@ -200,7 +255,6 @@ function subETLSPARQL(cliContext: CliContext): Middleware {
             method: "post",
           },
         }),
-
         Ratt.Source.url(url, {
           request: {
             headers: {
@@ -240,37 +294,21 @@ function subETLSPARQL(cliContext: CliContext): Middleware {
             graph: reportGraph,
           },
           terminateOn: false,
+          log: false,
         }),
         mw.toRdf(pipe2.destinations.dataset)
       );
 
       await pipe2.run();
+      ctx.record[extS] = true;
+      ctx.record[ds] = dsName
     } catch (error) {
-      console.error(error);
-      try {
-        const head = await fetch(
-          `${ctx.getString(dataUrl).replace("<", "").replace(">", "")}`,
-          {
-            method: "HEAD",
-          }
-        );
-        const size = head.headers.get(contentLength);
-        if (size && +size < 20000000) {
-          ctx.record[dataserviceType] = "RATT";
-          return next();
-        }
-      } catch (error: any) {
-        console.warn(
-          error.message,
-          `RATT SPARQL endpoint from dataset ${ctx.record[datasetIri]} could not be created`
-        );
-      }
-      ctx.record[dataserviceType] = "TriplyDB";
+      ctx.record[extS] = false;
+      ctx.record[error_extern] = error;
     }
     return next();
   };
 }
-
 
 function subETLComunica(cliContext: CliContext): Middleware {
   return async (ctx, next) => {
@@ -279,22 +317,21 @@ function subETLComunica(cliContext: CliContext): Middleware {
       const graph = ctx.getString(datasetIri).replace("<", "").replace(">", "");
       const edmGraph =
         ctx.getString(datasetIri).replace("<", "").replace(">", "") + "edm";
+      const dsName = ctx
+        .getString(title)
+        .toLowerCase()
+        .replace(/[^a-zA-Z0-9]+(.)/g, (_m, chr) => chr.toUpperCase())
+        .substring(0, 35); // Create a datasetName that is understandable.
+
       const pipe3 = new Ratt({
         defaultGraph: graph,
         cliContext: cliContext,
         prefixes: prefixes,
         sources: { ...sources, dataset: Ratt.Source.url(url) },
         destinations: {
-          dataset: Ratt.Destination.TriplyDb.rdf(
-            ctx
-              .getString(title)
-              .toLowerCase()
-              .replace(/[^a-zA-Z0-9]+(.)/g, (_m, chr) => chr.toUpperCase())
-              .substring(0, 35), // Create a datasetName that is understandable.
-            {
-              overwrite: true,
-            }
-          ),
+          dataset: Ratt.Destination.TriplyDb.rdf(dsName, {
+            overwrite: true,
+          }),
         },
       });
       // TD: https://issues.triply.cc/issues/6180
@@ -321,14 +358,17 @@ function subETLComunica(cliContext: CliContext): Middleware {
             graph: reportGraph,
           },
           terminateOn: false,
+          log: false,
         }),
         mw.toRdf(pipe3.destinations.dataset)
       );
 
       await pipe3.run();
+      ctx.record[rattS] = true;
+      ctx.record[ds] = dsName
     } catch (error) {
-      console.error(error);
-      ctx.record[dataserviceType] = "TriplyDB";
+      ctx.record[rattS] = false;
+      ctx.record[error_ratt] = error;
     }
     return next();
   };
@@ -361,31 +401,31 @@ function subETLTriplyDB(cliContext: CliContext): Middleware {
       // TD: https://issues.triply.cc/issues/6180
       pipe4.before(async () => {
         const acc = await pipe4.triplyDb.getAccount();
-        const ds = await acc.ensureDataset(dsName);
-        await ds.importFromUrls(url);
-        await ensure_service(ds, "default");
+        const dataSet = await acc.ensureDataset(dsName);
+        await dataSet.importFromUrls(url);
+        await ensure_service(dataSet, "default");
         await ensure_query(acc, eccbooks2edm, {
-          dataset: ds,
+          dataset: dataSet,
           queryString: eccbooks2edmQueryString,
         });
         await ensure_query(acc, eccucfix2edm, {
-          dataset: ds,
+          dataset: dataSet,
           queryString: eccucfix2edmQueryString,
         });
         await ensure_query(acc, finnabooks2edm, {
-          dataset: ds,
+          dataset: dataSet,
           queryString: finnabooks2edmQueryString,
         });
         await ensure_query(acc, ksamsok2edm, {
-          dataset: ds,
+          dataset: dataSet,
           queryString: ksamsok2edmQueryString,
         });
         await ensure_query(acc, nmvw2edm, {
-          dataset: ds,
+          dataset: dataSet,
           queryString: nmvw2edmQueryString,
         });
         await ensure_query(acc, schema2edm, {
-          dataset: ds,
+          dataset: dataSet,
           queryString: schema2edmQueryString,
         });
       });
@@ -411,54 +451,18 @@ function subETLTriplyDB(cliContext: CliContext): Middleware {
             graph: reportGraph,
           },
           terminateOn: false,
+          log: false,
         }),
         mw.toRdf(pipe4.destinations.dataset)
       );
 
       await pipe4.run();
+      ctx.record[triplyDBS] = true;
+      ctx.record[ds] = dsName
     } catch (error) {
-      console.error(error);
+      ctx.record[triplyDBS] = false;
+      ctx.record[error_triplyDB] = error;
     }
-    return next();
-  };
-}
-
-// Record
-
-function endpoint(): Middleware {
-  return async (ctx, next) => {
-    // Ophalen endpoint als deze al aangemaakt is.
-    try {
-      if (ctx.getString(dataFormat) === applicationSPARQLQuery) {
-        ctx.record[dataserviceType] = "extern";
-        return next();
-      }
-    } catch (error: any) {
-      console.warn(
-        error.message,
-        `External SPARQL endpoint from dataset ${ctx.record[datasetIri]} is not available or failed to return correct SPARQL`
-      );
-      return;
-    }
-    try {
-      const head = await fetch(
-        `${ctx.getString(dataUrl).replace("<", "").replace(">", "")}`,
-        {
-          method: "HEAD",
-        }
-      );
-      const size = head.headers.get(contentLength);
-      if (size && +size < 20000000) {
-        ctx.record[dataserviceType] = "RATT";
-        return next();
-      }
-    } catch (error: any) {
-      console.warn(
-        error.message,
-        `RATT SPARQL endpoint from dataset ${ctx.record[datasetIri]} could not be created`
-      );
-    }
-    ctx.record[dataserviceType] = "TriplyDB";
     return next();
   };
 }
