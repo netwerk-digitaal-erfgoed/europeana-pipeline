@@ -20,9 +20,7 @@ import {
 } from "./helpers/generics";
 import { IQueryResult } from "@comunica/actor-init-sparql/lib/ActorInitSparql-browser";
 import { newEngine } from "@triply/actor-init-sparql-rdfjs";
-const md5 = require("md5");
 import * as path from "path";
-import { sdo } from "./helpers/ratt-helpers";
 import { streamToString } from "@triply/ratt/lib/utils/files";
 
 import { Parser } from "n3";

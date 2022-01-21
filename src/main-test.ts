@@ -141,14 +141,14 @@ function subETL(cliContext: CliContext): Middleware {
         mw.sparqlConstruct(schema2edmQueryString, {
           toGraph: edmGraph,
         }),
-        // mw.validateShacl([pipe2.sources.edmShapes], {
-        //   graphs: [edmGraph],
-        //   report: {
-        //     destination: pipe2.destinations.dataset,
-        //     graph: reportGraph,
-        //   },
-        //   terminateOn: false,
-        // }),
+        mw.validateShacl([pipe2.sources.edmShapes], {
+          graphs: [edmGraph],
+          report: {
+            destination: pipe2.destinations.dataset,
+            graph: reportGraph,
+          },
+          terminateOn: false,
+        }),
         mw.toRdf(pipe2.destinations.dataset)
       );
 
