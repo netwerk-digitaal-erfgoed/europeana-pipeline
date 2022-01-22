@@ -205,7 +205,6 @@ export async function ensure_service(
   try {
     _service = await get_service(_this, name)
   } catch (e) {
-    console.error(e)
     _service = await _this.addService(_type, name)
   }
   await _service.update()
