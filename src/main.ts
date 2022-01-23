@@ -187,7 +187,7 @@ function endpoint(): Middleware {
         ctx.record[ratt] = true;
         return next();
       }
-      if (sizeContent && +sizeContent < 2000000 && !url.endsWith("gz")) {
+      if (sizeContent && +sizeContent < 20000000 && !url.endsWith("gz")) {
         ctx.record[ratt] = true;
         return next();
       }
@@ -406,6 +406,7 @@ function subETLTriplyDB(cliContext: CliContext): Middleware {
         const acc = await pipe4.triplyDb.getAccount();
         const dataSet = await acc.ensureDataset(dsName);
         await dataSet.importFromUrls(url);
+        if (ctx.getNumber(size) > 200000000) return;
         await ensure_service(dataSet, "default");
         await ensure_query(acc, eccbooks2edm, {
           dataset: dataSet,
@@ -432,7 +433,11 @@ function subETLTriplyDB(cliContext: CliContext): Middleware {
           queryString: schema2edmQueryString,
         });
       });
-
+      if (ctx.getNumber(size) > 200000000) {
+        ctx.record[triplyDBS] = false;
+        ctx.record[error_triplyDB] = "Too large to run, due to memory";
+        return next();
+      }
       pipe4.use(
         mw.loadRdf(
           [
