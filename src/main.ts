@@ -147,6 +147,9 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
         const graphInfo = await graph.getInfo()
         graphStr += ` - ${graphInfo.graphName}: ${graphInfo.numberOfStatements}\n`
       }
+      for await (const service of dataSet.getServices()){
+        await service.delete()
+      }
       dsInfo = `${ctx.getString(ds)}:\n${graphStr}`
     } catch(e){
       // No dataset is created and thus no data is available.
