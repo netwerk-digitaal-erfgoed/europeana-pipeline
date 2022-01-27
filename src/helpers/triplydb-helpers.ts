@@ -55,14 +55,12 @@ export async function add_query(
   name: string,
   args: AddQueryArgs
 ) {
-  const datasetId = (await args.dataset.getInfo()).id
-  return await _this.addQuery({
+  return await _this.addQuery(name,{
     accessLevel: args.accessLevel ? args.accessLevel : 'private',
     autoselectService: false,
-    dataset: datasetId,
+    dataset: args.dataset,
     description: args.description,
     displayName: args.description ? args.displayName : '',
-    name: name,
     renderConfig: {
       output: args.output ? args.output : 'table',
     },
@@ -205,7 +203,7 @@ export async function ensure_service(
   try {
     _service = await get_service(_this, name)
   } catch (e) {
-    _service = await _this.addService(_type, name)
+    _service = await _this.addService( name, {type: _type})
   }
   await _service.update()
   return _service
