@@ -9,10 +9,7 @@ const defaultGraph = Ratt.prefixer(
 
 export default async function (cliContext: CliContext): Promise<Ratt> {
   // RATT context
-  const sourceDatasetName = process.env.SOURCE_DATASET;
   const destinationDatasetName = process.env.DESTINATION_DATASET;
-  if (!sourceDatasetName)
-    throw new Error("Expected environment variable SOURCE_DATASET to be set");
   if (!destinationDatasetName)
     throw new Error(
       "Expected environment variable DESTINATION_DATASET to be set"

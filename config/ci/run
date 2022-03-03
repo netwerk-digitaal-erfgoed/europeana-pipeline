@@ -15,14 +15,15 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
     -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
     -e TRIPLYDB_ACCOUNT=${TRIPLYDB_ACCOUNT} \
+    -e LOCAL_QUERY=${LOCAL_QUERY} \
+    -e SOURCE_DATASET=${SOURCE_DATASET} \
+    -e DESTINATION_DATASET=${DESTINATION_DATASET} \
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG}
   echo "Running crawler"
   docker run --rm \
     -v /scratch/edm-conversie-project-${MODE}/rdf:/data \
-    -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
-    -e TRIPLYDB_ACCOUNT=${TRIPLYDB_ACCOUNT} \
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-crawler:${DOCKER_IMAGE_TAG} \
@@ -32,6 +33,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
     -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
     -e TRIPLYDB_ACCOUNT=${TRIPLYDB_ACCOUNT} \
+    -e DESTINATION_DATASET=${DESTINATION_DATASET} \    
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG} \
