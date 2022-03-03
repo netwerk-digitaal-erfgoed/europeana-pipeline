@@ -11,15 +11,22 @@ default:
     # Gitlab registry
     - docker login -u ${CI_REGISTRY_USER} -p ${CI_REGISTRY_PASSWORD} ${CI_REGISTRY}
 
-build:
+build-etl:
   stage: build
   script:
-    - ./config/ci/build
+    - ./config/ci/build etl
+  only:
+    variables:
+      - $MODE == null
+build-crawler:
+  stage: build
+  script:
+    - ./config/ci/build crawler
   only:
     variables:
       - $MODE == null
 
-test:
+test-etl:
   stage: test
   script:
     - ./config/ci/test
@@ -41,16 +48,3 @@ runProduction:
   only:
     variables:
       - $MODE == "production"
-
-# uncoment this and add a 'release' stage at the top to enable image releases
-# release:
-#   stage: release
-#   script:
-#     - ./config/ci/release
-#   only:
-#     variables:
-#       - $MODE == null
-#     refs:
-#       # dont publish feature branches, only master (latest) or new versions
-#       - /^v-.*$/
-#       - master

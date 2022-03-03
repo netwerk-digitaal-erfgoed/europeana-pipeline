@@ -107,7 +107,7 @@ WHERE {
         ?uri_cho schema:image ?image
         BIND(IRI(?image) as ?isShownBy)
       }
-      BIND(COALESCE(IRI(?cho_license),IRI(?dataset_license),"no license info") as ?license)
+      # BIND(COALESCE(IRI(?cho_license),IRI(?dataset_license),"no license info") as ?license)
     }
     UNION
     {

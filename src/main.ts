@@ -1,7 +1,6 @@
 import { Parser } from "n3";
 import * as fs from "fs-extra";
-import path from "path";
-import { Ratt, CliContext, Context } from "@triply/ratt";
+import { Ratt, CliContext } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
 import { prefix, sparqlSelect } from "./helpers/ratt-helpers";
 import { ensure_service, ensure_query } from "./helpers/triplydb-helpers";
@@ -70,17 +69,18 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
     },
     destinations: {
       dataset: Ratt.Destination.file(
-        `data/rdf/${destinationDatasetName}.nt.gz`
+        `data/rdf/${destinationDatasetName}.ttl`
       ),
     },
   });
 
-  pipe.use(mw.loadRdf(pipe.sources.dataset));
+  pipe.use(mw.loadRdf(pipe.sources.dataset,{defaultGraph:sourceDatasetName}));
   pipe.use(
     sparqlSelect(sparql, sparqlUrlQuery),
     mw.add({
       key: sparqlUrl,
       value: (ctx) => {
+        return ""
         return ctx.getAny(sparql)[0].get("?sparqlUrl").value;
       },
     }),
@@ -143,7 +143,7 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   // Comunica implementation
   pipe.use(
     mw.when(
-      (ctx) => ctx.isEmpty(sparqlUrl) && +ctx.getString(size) < 20000000,
+      (ctx) =>  ctx.isEmpty(sparqlUrl) && ctx.isNumber(size) && ctx.getNumber(size) < 20000000,
       async (ctx, next) => {
         const parser = new Parser();
         const response = await fetch(ctx.getString(dataUrl));
@@ -160,18 +160,17 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   // TriplyDb
   pipe.use(
     mw.when(
-      (ctx) => ctx.isEmpty(sparqlUrl) && +ctx.getString(size) > 20000000,
+      (ctx) => ctx.isEmpty(sparqlUrl) && (!ctx.isNumber(size) || +ctx.getNumber(size) > 20000000),
       async (ctx, next) => {
         const acc = await pipe.triplyDb.getAccount();
-        var dataSet = await acc.ensureDataset(
-          ctx.getString(destinationDatasetName)
-        );
+        var dataSet = await acc.ensureDataset(destinationDatasetName);
         dataSet = await dataSet.clear("graphs");
         await dataSet.importFromUrls([ctx.getString(dataUrl)]);
         await ensure_service(dataSet, "default");
         await ensure_query(acc, "default", {
           dataset: dataSet,
           queryString: ctx.getString(query),
+          output: "response"
         });
         return next();
       },
@@ -182,23 +181,6 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   );
 
   pipe.use(mw.toRdf(pipe.destinations.dataset));
-
-  pipe.after(async () => {
-    const account = await pipe.triplyDb.getAccount(
-      process.env.TRIPLYDB_ACCOUNT
-    );
-    const dataset = await account.ensureDataset(destinationDatasetName);
-    await dataset.addPrefixes(pipe.prefix);
-
-    const linkedData = path.resolve(
-      pipe.getDataDir(`rdf`),
-      destinationDatasetName
-    );
-
-    console.time("Imported from files");
-    await dataset.importFromFiles([linkedData], { overwriteAll: true });
-    console.timeEnd("Imported from files");
-  });
 
   return pipe;
 }

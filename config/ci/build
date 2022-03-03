@@ -1,8 +1,25 @@
 #!/bin/bash
-
-
+set -e
 echoinfo ${CI_COMMIT_MESSAGE} | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$' && [ "${CI_COMMIT_REF_NAME}" = "master" ] && echo "Skipping version builds on the master branche to avoid the pipeline doing the same work twice" && exit;
+TARGET=${1}
+if [ -z "${TARGET}" ]; then
+  echo "Argument TARGET missing"
+  exit 1
+fi
+
 source ./config/ci/.env
+if [ "${TARGET}" = "etl"]; then
+  DOCKER_IMAGE_NAME+="-etl"
+  DOCKER_FILE=./config/docker/Dockerfile
+elif [ "${TARGET}" = "crawler"]; then
+  DOCKER_IMAGE_NAME+="-crawler"
+  DOCKER_FILE="./crawler/Dockerfile"
+else
+  echo "Argument ${TARGET} not recognized"
+  exit 1
+fi
+
+
 if [ -n "${FORCE}" ]; then
   DOCKER_ARG="--no-cache"
 fi
@@ -10,7 +27,7 @@ fi
 now=`date -u +"%Y-%m-%dT%H:%M:%SZ"`
 echoinfo "Building for tag ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} at ${now}"
 docker build \
-    -f ./config/docker/Dockerfile \
+    -f ${DOCKER_FILE} \
     ${DOCKER_ARG} \
     --build-arg "NPM_TOKEN=${NPM_TOKEN}" \
     --build-arg "BUILD_REF=${CI_COMMIT_REF_NAME}" \

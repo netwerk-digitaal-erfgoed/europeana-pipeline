@@ -183,6 +183,7 @@ export async function ensure_service(
   let _service: Service
   try {
     _service = await get_service(_this, name)
+    if (!await _service.isUpToDate()) await _service.update()
   } catch (e) {
     _service = await _this.addService(name, {type:_type})
   }
