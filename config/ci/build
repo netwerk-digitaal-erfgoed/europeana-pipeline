@@ -8,10 +8,10 @@ if [ -z "${TARGET}" ]; then
 fi
 
 source ./config/ci/.env
-if [ "${TARGET}" = "etl"]; then
+if [ "${TARGET}" = "etl" ]; then
   DOCKER_IMAGE_NAME+="-etl"
   DOCKER_FILE=./config/docker/Dockerfile
-elif [ "${TARGET}" = "crawler"]; then
+elif [ "${TARGET}" = "crawler" ]; then
   DOCKER_IMAGE_NAME+="-crawler"
   DOCKER_FILE="./crawler/Dockerfile"
 else
