@@ -1,8 +1,0 @@
-PREFIX sh: <http://www.w3.org/ns/shacl#>
-
-SELECT ?focusNode ?message WHERE {
-  ?val a sh:ValidationResult ;
-       sh:focusNode ?focusNode ;
-       sh:resultMessage ?message .
-} 
-ORDER BY ?focusNode

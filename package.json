@@ -1,31 +1,31 @@
 {
   "author": "Triply <info@triply.cc>",
   "dependencies": {
-    "@triply/ratt": "^3.2.7",
+    "@triply/ratt": "^3.4.20",
     "chai": "^4.3.4",
-    "eslint-plugin-lodash": "^7.3.0",
-    "fs-extra": "^10.0.0",
+    "eslint-plugin-lodash": "^7.4.0",
+    "fs-extra": "^10.0.1",
     "lodash": "^4.17.20",
-    "mocha": "^9.1.1",
-    "node-fetch": "^3.0.0",
+    "mocha": "^9.2.1",
+    "node-fetch": "^3.2.1",
     "source-map-support": "^0.5.20",
-    "ts-essentials": "^8.1.0"
+    "ts-essentials": "^9.1.2"
   },
   "description": "ETL for EDM Conversie Project",
   "devDependencies": {
     "@types/chai": "^4.2.21",
     "@types/fs-extra": "^9.0.12",
-    "@types/lodash": "^4.14.173",
+    "@types/lodash": "^4.14.179",
     "@types/mocha": "^9.0.0",
-    "@typescript-eslint/eslint-plugin": "^4.31.1",
-    "@typescript-eslint/parser": "^4.31.1",
-    "eslint": "^7.32.0",
-    "eslint-config-prettier": "^8.3.0",
-    "eslint-plugin-jest": "^24.4.2",
-    "husky": "7.0.2",
-    "lint-staged": "^11.1.2",
+    "@typescript-eslint/eslint-plugin": "^5.13.0",
+    "@typescript-eslint/parser": "^5.13.0",
+    "eslint": "^8.10.0",
+    "eslint-config-prettier": "^8.4.0",
+    "eslint-plugin-jest": "^26.1.1",
+    "husky": "7.0.4",
+    "lint-staged": "^12.3.4",
     "prettier": "^2.4.1",
-    "typescript": "^4.4.3"
+    "typescript": "^4.6.2"
   },
   "lint-staged": {
     "*.ts?(x)": [

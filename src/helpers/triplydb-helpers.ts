@@ -4,11 +4,11 @@
  */
 
 import { NamedNode } from 'n3'
-import { Account } from '@triply/triplydb/lib/Account'
+import { Account, } from '@triply/triplydb/lib/Account'
+import { AddQueryDataset } from '@triply/triplydb/lib/commonAccountFunctions'
 import TriplyDB from '@triply/triplydb/lib/App'
 import Dataset from '@triply/triplydb/lib/Dataset'
 import Service from '@triply/triplydb/lib/Service'
-import { Models } from '@triply/utils';
 
 
 
@@ -41,37 +41,6 @@ import { Models } from '@triply/utils';
  *     })
  */
 
-export declare interface AddQueryArgs {
-  accessLevel?: Models.AccessLevel
-  dataset: Dataset
-  description?: string
-  displayName?: string
-  queryString: string
-  output?: 'table'|'gallery'|'raw'
-  variables?: Models.VariableConfig[]
-}
-export async function add_query(
-  _this: Account,
-  name: string,
-  args: AddQueryArgs
-) {
-  return await _this.addQuery(name,{
-    accessLevel: args.accessLevel ? args.accessLevel : 'private',
-    autoselectService: false,
-    dataset: args.dataset,
-    description: args.description,
-    displayName: args.description ? args.displayName : '',
-    renderConfig: {
-      output: args.output ? args.output : 'table',
-    },
-    requestConfig: {
-      payload: {
-        query: args.queryString
-      }
-    },
-    variables: args.variables
-  })
-}
 
 
 
@@ -128,12 +97,27 @@ export async function ensure_organization(
   }
 }
 
+/**
+ * Adds an asset, replacing the existing asset if it exists.
+ */
 
+ export async function putAsset(
+  dataset:Dataset,
+  file:string,
+  assetName: string,
+) {
+  try {
+    const asset = await dataset.getAsset(assetName)
+    await asset.delete()
+  } finally {
+    return await dataset.uploadAsset(file,assetName)
+  }
+}
 
 /**
  * Ensures that this account has a query with the given name.
  *
- * @param _this The account for which the quert will be ensured.
+ * @param account The account for which the quert will be ensured.
  * @param name The name of the ensured query.
  * @param args Additional arguments (see `add_query`)
  *
@@ -149,24 +133,21 @@ export async function ensure_organization(
  */
 
 export async function ensure_query(
-  _this: Account,
+  account: Account,
   name: string,
-  args: AddQueryArgs
+  args: AddQueryDataset
 ) {
   try {
-    const query = await _this.getQuery(name)
-    const info = await query.getInfo()
-    if (info.dataset?.id != (await args.dataset.getInfo()).id) {
-      await remove_query(_this, name)
-      throw Error("Requested query does not match the dataset that was retrieved.")
+    const query = await account.getQuery(name)
+    const queryInfo = await query.getInfo()
+    const datasetInfo = await args.dataset.getInfo()
+    if (queryInfo.requestConfig?.payload.query != args.queryString || queryInfo.dataset?.id !== datasetInfo.id) {
+      console.info("Query is out-of-date. Recreating " + name)
+      await remove_query(account, name)
+      throw Error("Requested query does not match the query string that was retrieved.") // this will be caught below
     }
-    if (info.requestConfig?.payload.query != args.queryString) {
-      await remove_query(_this, name)
-      throw Error("Requested query does not match the query string that was retrieved.")
-    }
-    return query
   } catch (e) {
-    return await add_query(_this, name, args)
+    await account.addQuery(name, args)
   }
 }
 
@@ -203,9 +184,8 @@ export async function ensure_service(
   try {
     _service = await get_service(_this, name)
   } catch (e) {
-    _service = await _this.addService( name, {type: _type})
+    _service = await _this.addService(name, {type:_type})
   }
-  await _service.update()
   return _service
 }
 
@@ -232,12 +212,9 @@ export async function get_service(
   _this: Dataset,
   name: string
 ) {
-  for await (const service of _this.getServices()) {
-    if ((await service.getInfo()).name === name) {
-      return service
-    }
-  }
-  throw Error(`Could not find a service called ${name}.`)
+   const service = _this.getService(name)
+   if (!service)  throw Error(`Could not find a service called ${name}.`)
+   return service
 }
 
 
@@ -248,7 +225,7 @@ export async function get_service(
  * @param _this The dataset that the imported graphs will be added to.
  * @param from The dataset from which graphs are imported.
  * @param graphs The list of names of the graphs that are imported.
- *        If unspecified or empty, all graph names are used.
+ *        If unspecified all graph names are used.
  *
  * Example use:
  *
@@ -263,31 +240,10 @@ export async function get_service(
 export async function import_from_dataset(
   _this: Dataset,
   from: Dataset,
-  graphs: NamedNode[] = []
+  graphs?: NamedNode[]
 ) {
-  // Take all graph names in case the specified list is empty.
-  let graphs_: NamedNode[] = new Array()
-  if (graphs.length === 0) {
-    for await (const graph of from.getGraphs()) {
-      // Oops, Graphs are neither NamedNodes nor strings...
-      // A third type for graph names :-(
-      // Let's extract the string name for now, because we can create a NamedNode out of that.
-      graphs_.push(new NamedNode((await graph.getInfo()).graphName))
-    }
-  } else {
-    graphs_ = graphs
-  }
-  // Create a map argument that is accepted by TriplyDB.js for the established list of graph names.
-  // Oops, we need to specify the graph mapping as an object, even though we want from=to for every graph.
-  const map: {[key: string]: string} = {}
-  for (const graph of graphs_) {
-    // Oops, NamedNodes are not supported, we first extract the string.
-    map[graph.value] = graph.value
-  }
-  await _this.importFromDataset(from, map)
+  await _this.importFromDataset(from, graphs && {graphNames:graphs})
 }
-
-
 
 /**
  * @todo What is the contribution of this function?
