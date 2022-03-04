@@ -9,6 +9,7 @@ const defaultGraph = Ratt.prefixer(
   "https://data.netwerkdigitaalerfgoed.nl/edm/"
 );
 
+// Adjusted to the syntax used in the [SPARQL TSV header format](https://www.w3.org/TR/sparql11-results-csv-tsv/#tsv-example).
 const query = "?query";
 const dataUrl = "?dataUrl";
 const size = "?size";
@@ -29,21 +30,33 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   const sparqlQuery = `
 prefix dcat: <http://www.w3.org/ns/dcat#>
 prefix dct: <http://purl.org/dc/terms/>
-select ?size ?dataUrl ?sparqlUrl ?query WHERE {
-    bind(<${sourceDatasetName}> as ?dataset)
-    ?dataset a dcat:Dataset .
-    ?dataset dcat:distribution ?distribution .
-    ?distribution dct:format ?format .
-    ?distribution dcat:accessURL ?dataUrl .
-    FILTER( ?format="application/n-quads" || ?format="application/n-triples" || ?format="application/trig" || ?format="application/turtle" || ?format="text/n3" || ?format="text/turtle")
-    optional {
-        ?distribution dcat:byteSize ?size .
-    }
-    optional {
-        ?dataset dcat:distribution ?sparqlDistribution .
-        ?sparqlDistribution dcat:accessURL ?sparqlUrl .
-        ?sparqlDistribution dct:format "application/sparql-query" .
-    }
+select ?size ?dataUrl ?sparqlUrl ?query {
+  bind(<${sourceDatasetName}> as ?dataset)
+  ?dataset a dcat:Dataset .
+  ?dataset dcat:distribution ?distribution .
+  ?distribution dct:format ?format .
+  ?distribution dcat:accessURL ?dataUrl .
+  filter(?format in ("application/n-quads", "application/n-triples", "application/trig", "application/turtle", "text/n3", "text/turtle"))
+  optional {
+    ?distribution dcat:byteSize ?size0.
+    bind(xsd:integer(?size0) as ?size)
+  }
+  optional {
+    # ?service
+    #   a dcat:DataService;
+    #   dcat:servesDataset ?dataset;
+    #   dcat:endpointURL ?endpoint.
+    # # Optional: also specify the result of a specific query (probably not needed).
+    # ?result
+    #   a dcat:Distribution;
+    #   dcat:accessService ?service;
+    #   dcat:mediaType 'application/sparql-results+json'.
+
+    # OOPS: Wrong data model.
+    ?dataset dcat:distribution ?sparqlDistribution .
+    ?sparqlDistribution dcat:accessURL ?sparqlUrl .
+    ?sparqlDistribution dct:format "application/sparql-query" .
+  }
 } limit 1`;
 
   const datasetRegisterUrl =
@@ -75,35 +88,49 @@ select ?size ?dataUrl ?sparqlUrl ?query WHERE {
     mw.change({
       key: sparqlUrl,
       type: "string",
-      change: (val) => {
+      change: val => {
         return ""
-        return val.replace("<", "").replace(">", "");
+        return val.replace("<", "").replace(">", "")
       },
     }),
+    /*
+    // US: fromSparqlJson, fromSparqlTsv, fromSparqlCsv(, fromSparqlXml)
+    sources: {
+      dataset: Ratt.Source.url(datasetRegisterUrl, {
+        request: {
+          body: sparqlQuery,
+          headers: {
+            accept: "text/tab-separated-values",
+            "content-type": "application/sparql-query",
+          },
+          method: "post",
+        },
+      }),
+    },
+    */
     mw.change({
       key: dataUrl,
       type: "string",
-      change: (val) => {
-        return val.replace("<", "").replace(">", "");
-      },
+      change: val => val.replace("<", "").replace(">", ""),
     }),
+    // If the dataset metadata does not yet include a query string,
+    // we supply a query string manually.
     mw.when(
-      (ctx) => ctx.isEmpty(query),
+      ctx => ctx.isEmpty(query),
       mw.add({
         key: query,
-        value: (_ctx) => {
-          if (localQueryLocation) {
-            return fs.readFileSync(localQueryLocation, "utf8");
-          }
+        value: _ctx => {
           if (!localQueryLocation) {
-            throw new Error("No query available");
+            throw new Error("No query available")
           }
+          return fs.readFileSync(localQueryLocation, "utf8")
         },
       })
     )
   );
+  // ASSUMPTION: The current RATT record has a valid value for the "query" field.
 
-  // SPARQL implementation
+  // VARIANT 1 of 3: Use an external SPARQL endpoint.
   pipe.use(
     mw.when(
       (ctx) => ctx.isNotEmpty(sparqlUrl),
@@ -120,6 +147,7 @@ select ?size ?dataUrl ?sparqlUrl ?query WHERE {
             body: ctx.getString(query),
           });
           text = await response.text();
+          // TODO: Stream to file.
           ctx.store.addQuads(parser.parse(text));
         } catch (error) {
           console.log(error, text);
@@ -129,13 +157,17 @@ select ?size ?dataUrl ?sparqlUrl ?query WHERE {
     )
   );
 
-  // Comunica implementation
+  // VARIANT 2 of 3: Use the in-memory Comunica implementation for relatively small datasets.
   pipe.use(
     mw.when(
       (ctx) =>
         ctx.isEmpty(sparqlUrl) &&
         ctx.isNumber(size) &&
-        ctx.getNumber(size) < 20000000,
+        // OOPS: magic number, magic unit (inherent in the data)
+        ctx.getNumber(size) < 20_000_000,
+      // CANNOT: From custom middleware to mw.fromRdf().
+      // US: Dynamic sources in RATT
+      // Look at <https://issues.triply.cc/issues/5616>, <https://issues.triply.cc/issues/6184>
       async (ctx, next) => {
         const parser = new Parser();
         const response = await fetch(ctx.getString(dataUrl));
@@ -149,18 +181,22 @@ select ?size ?dataUrl ?sparqlUrl ?query WHERE {
     )
   );
 
-  // TriplyDb
+  // VARIANT 3 of 3: Use TriplyDB for larger datasets.
   pipe.use(
     mw.when(
       (ctx) =>
         ctx.isEmpty(sparqlUrl) &&
-        (!ctx.isNumber(size) || +ctx.getNumber(size) > 20000000),
+        // OOPS: repeating a magic number
+        (!ctx.isNumber(size) || +ctx.getNumber(size) > 20_000_000),
       async (ctx, next) => {
         const acc = await pipe.triplyDb.getAccount();
         var dataSet = await acc.ensureDataset(destinationDatasetName);
+        // TDBJS/OOPS: deleteGraph, but clean("graphs")
         dataSet = await dataSet.clear("graphs");
         await dataSet.importFromUrls([ctx.getString(dataUrl)]);
         await ensure_service(dataSet, "default");
+        // US: RATT support for using API variables with a SPARQL endpoint in TDB (without saved query)?
+        // US: Can pagination be implemented for SPARQL endpoints in TDB (without saved query)?
         await ensure_query(acc, "default", {
           dataset: dataSet,
           queryString: ctx.getString(query),
@@ -168,6 +204,7 @@ select ?size ?dataUrl ?sparqlUrl ?query WHERE {
         });
         return next();
       },
+      // TODO: Stream to file.
       mw.loadRdf(Ratt.Source.TriplyDb.query("default"), {
         defaultGraph: defaultGraph("edm"),
       })

@@ -1,5 +1,9 @@
 # EDM Conversie Project
 
+- SOURCE_DATASET :: The IRI that denotes the source dataset in the NDE Dataset Registry.
+- DESTINATION_DATASET :: The name of the dataset in TriplyDB.  The name must only use alphanumeric characters and hyphen (`-`).
+- LOCAL_QUERY :: The location where the transformation can be found.  Notice that this is only used when the source dataset does not include a transformation query in its metadata.
+
 In order to be able to publish linked data to an online data catalog, RATT must first be configured.  This is done with the following steps:
 
 1. If you haven't configured your environment for running RATT at all, you should first install Node.js and Yarn.
