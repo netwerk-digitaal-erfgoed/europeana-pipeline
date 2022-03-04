@@ -13,6 +13,7 @@ case ${1} in
     if [ -z "${RATT_VERBOSITY}" ]; then
       RATT_VERBOSITY="--verbose"
     fi
+    ls -lah .
     sudo -HEu ${ETL_USER} bash -c "yarn ratt ${RATT_VERBOSITY} ./lib/main.js"
     ;;
   app:test)
