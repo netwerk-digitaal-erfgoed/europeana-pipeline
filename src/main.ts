@@ -94,7 +94,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
     mw.change({
       key: sparqlUrl,
       type: "string",
-      change: (_val) => ""
+      change: (_val) => "",
     }),
     // If the dataset metadata does not yet include a query string,
     // we supply a query string manually.
@@ -132,6 +132,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           text = await response.text();
           ctx.store.addQuads(parser.parse(text));
         } catch (error) {
+
           console.log(error, text);
         }
         return next();
@@ -146,16 +147,18 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         ctx.isEmpty(sparqlUrl) &&
         ctx.isNumber(size) &&
         ctx.getNumber(size) < maxComunicaSize,
-      async (ctx, next) => {
-        const parser = new Parser();
-        const response = await fetch(ctx.getString(dataUrl));
-        const text = await response.text();
-        ctx.store.addQuads(parser.parse(text));
-        return next();
-      },
-      mw.sparqlConstruct((ctx) => ctx.getString(query), {
-        toGraph: defaultGraph("edm"),
-      })
+      [
+        async (ctx, next) => {
+          const parser = new Parser();
+          const response = await fetch(ctx.getString(dataUrl));
+          const text = await response.text();
+          ctx.store.addQuads(parser.parse(text));
+          return next();
+        },
+        mw.sparqlConstruct((ctx) => ctx.getString(query), {
+          toGraph: defaultGraph("edm"),
+        }),
+      ]
     )
   );
 
@@ -165,22 +168,24 @@ select ?size ?dataUrl ?sparqlUrl ?query {
       (ctx) =>
         ctx.isEmpty(sparqlUrl) &&
         (!ctx.isNumber(size) || +ctx.getNumber(size) > maxComunicaSize),
-      async (ctx, next) => {
-        const acc = await pipe.triplyDb.getAccount();
-        var dataSet = await acc.ensureDataset(destinationDatasetName);
-        dataSet = await dataSet.clear("graphs");
-        await dataSet.importFromUrls([ctx.getString(dataUrl)]);
-        await ensure_service(dataSet, "default");
-        await ensure_query(acc, "default", {
-          dataset: dataSet,
-          queryString: ctx.getString(query),
-          output: "response",
-        });
-        return next();
-      },
-      mw.loadRdf(Ratt.Source.TriplyDb.query("default"), {
-        defaultGraph: defaultGraph("edm"),
-      })
+      [
+        async (ctx, next) => {
+          const acc = await pipe.triplyDb.getAccount();
+          var dataSet = await acc.ensureDataset(destinationDatasetName);
+          dataSet = await dataSet.clear("graphs");
+          await dataSet.importFromUrls([ctx.getString(dataUrl)]);
+          await ensure_service(dataSet, "default");
+          await ensure_query(acc, "default", {
+            dataset: dataSet,
+            queryString: ctx.getString(query),
+            output: "response",
+          });
+          return next();
+        },
+        mw.loadRdf(Ratt.Source.TriplyDb.query("default"), {
+          defaultGraph: defaultGraph("edm"),
+        }),
+      ]
     )
   );
 
