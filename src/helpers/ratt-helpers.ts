@@ -1,28 +1,4 @@
 import { Ratt } from "@triply/ratt";
-import { IQueryResult } from "@comunica/actor-init-sparql/lib/ActorInitSparql-browser";
-import { newEngine } from "@triply/actor-init-sparql-rdfjs";
-import { addMwCallSiteToError } from "@triply/ratt/lib/utils";
-
-export function sparqlSelect(key: string, query: string) {
-  return addMwCallSiteToError(async function _sparqlSelect(ctx, next) {
-    let queryResult: IQueryResult;
-    try {
-      queryResult = await newEngine().query(query, {
-        sources: [ctx.store],
-      });
-    } catch (e: any) {
-      e.message = `While executing SPARQL query: ` + e.message;
-      throw e;
-    }
-    if (queryResult.type !== "bindings") {
-      throw new Error(
-        `Expected SPARQL target to return bindings, but received: ${queryResult.type}. SPARQL targets should only be SELECT queries.`
-      );
-    }
-    ctx.record[key] = await queryResult.bindings();
-    return next();
-  });
-}
 
 export const prefix = {
   aat: Ratt.prefixer('http://vocab.getty.edu/aat/'),

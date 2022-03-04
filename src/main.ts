@@ -2,50 +2,17 @@ import { Parser } from "n3";
 import * as fs from "fs-extra";
 import { Ratt, CliContext } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
-import { prefix, sparqlSelect } from "./helpers/ratt-helpers";
+import { prefix } from "./helpers/ratt-helpers";
 import { ensure_service, ensure_query } from "./helpers/triplydb-helpers";
 
 const defaultGraph = Ratt.prefixer(
   "https://data.netwerkdigitaalerfgoed.nl/edm/"
 );
 
-const sparqlHeaders = {
-  headers: {
-    accept: "text/tab-separated-values;",
-    "content-type": "application/sparql-query",
-  },
-  method: "post",
-};
-
-const query = "query";
-const dataUrl = "dataUrl";
-const size = "size";
-const sparqlUrl = "sparqlUrl";
-const sparql = "sparql";
-const data = "data";
-
-const sparqlUrlQuery = `
-  prefix dct: <http://purl.org/dc/terms/>
-  prefix dcat: <http://www.w3.org/ns/dcat#>
-  select ?sparqlUrl where {
-    ?datasetIri dcat:distribution ?distribution .
-    ?distribution dcat:accessURL ?sparqlUrl .
-    ?distribution dct:format "application/sparql-query" .
-  } limit 1`;
-
-const dataQuery = `
-  prefix xsd: <http://www.w3.org/2001/XMLSchema#>
-  prefix dct: <http://purl.org/dc/terms/>
-  prefix dcat: <http://www.w3.org/ns/dcat#>
-  select ?dataUrl ?size where {
-    ?datasetIri dcat:distribution ?distribution .
-    ?distribution dcat:accessURL ?dataUrl .
-    ?distribution dct:format ?dataFormat.
-    filter (?dataFormat !="application/sparql-query" )
-    optional {
-      ?distribution dcat:byteSize ?size .
-    }
-  } limit 1`;
+const query = "?query";
+const dataUrl = "?dataUrl";
+const size = "?size";
+const sparqlUrl = "?sparqlUrl";
 
 export default async function (cliContext: CliContext): Promise<Ratt> {
   // RATT context
@@ -58,64 +25,82 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
     throw new Error(
       "Expected environment variable DESTINATION_DATASET to be set"
     );
+
+  const sparqlQuery = `
+prefix dcat: <http://www.w3.org/ns/dcat#>
+prefix dct: <http://purl.org/dc/terms/>
+select ?size ?dataUrl ?sparqlUrl ?query WHERE {
+    bind(<${sourceDatasetName}> as ?dataset)
+    ?dataset a dcat:Dataset .
+    ?dataset dcat:distribution ?distribution .
+    ?distribution dct:format ?format .
+    ?distribution dcat:accessURL ?dataUrl .
+    FILTER( ?format="application/n-quads" || ?format="application/n-triples" || ?format="application/trig" || ?format="application/turtle" || ?format="text/n3" || ?format="text/turtle")
+    optional {
+        ?distribution dcat:byteSize ?size .
+    }
+    optional {
+        ?dataset dcat:distribution ?sparqlDistribution .
+        ?sparqlDistribution dcat:accessURL ?sparqlUrl .
+        ?sparqlDistribution dct:format "application/sparql-query" .
+    }
+} limit 1`;
+
+  const datasetRegisterUrl =
+    "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry";
+
   const pipe = new Ratt({
     defaultGraph: defaultGraph,
     cliContext: cliContext,
     prefixes: prefix,
     sources: {
-      dataset: Ratt.Source.url(
-        `https://triplestore.netwerkdigitaalerfgoed.nl/rest/explore/graph?uri=${sourceDatasetName}`
-      ),
+      dataset: Ratt.Source.url(datasetRegisterUrl, {
+        request: {
+          body: sparqlQuery,
+          headers: {
+            accept: "text/tab-separated-values",
+            "content-type": "application/sparql-query",
+          },
+          method: "post",
+        },
+      }),
     },
     destinations: {
-      dataset: Ratt.Destination.file(
-        `data/rdf/${destinationDatasetName}.ttl`
-      ),
+      dataset: Ratt.Destination.file(`data/rdf/${destinationDatasetName}.ttl`),
     },
   });
 
-  pipe.use(mw.loadRdf(pipe.sources.dataset,{defaultGraph:sourceDatasetName}));
+  pipe.use(mw.fromTsv(pipe.sources.dataset));
   pipe.use(
-    sparqlSelect(sparql, sparqlUrlQuery),
-    mw.add({
+    mw.change({
       key: sparqlUrl,
-      value: (ctx) => {
+      type: "string",
+      change: (val) => {
         return ""
-        return ctx.getAny(sparql)[0].get("?sparqlUrl").value;
+        return val.replace("<", "").replace(">", "");
       },
     }),
-    sparqlSelect(data, dataQuery),
-    mw.add({
+    mw.change({
       key: dataUrl,
-      value: (ctx) => {
-        return ctx.getAny(data)[0].get("?dataUrl").value;
+      type: "string",
+      change: (val) => {
+        return val.replace("<", "").replace(">", "");
       },
     }),
-    mw.add({
-      key: size,
-      value: (ctx) => {
-        return ctx.getAny(data)[0].get("?size")?.value;
-      },
-    }),
-    mw.add({
-      key: query,
-      value: (ctx) => {
-        const query = ctx.store.getObjects(
-          sourceDatasetName,
-          prefix.sh("sparqlConstruct"),
-          null
-        );
-        if (query.length > 0) {
-          return query[0];
-        }
-        if (localQueryLocation) {
-          return fs.readFileSync(localQueryLocation, "utf8");
-        }
-        if (!localQueryLocation) {
-          throw new Error("No query available");
-        }
-      },
-    })
+    mw.when(
+      (ctx) => ctx.isEmpty(query),
+      mw.add({
+        key: query,
+        value: (_ctx) => {
+          if (localQueryLocation) {
+            return fs.readFileSync(localQueryLocation, "utf8");
+          }
+          if (!localQueryLocation) {
+            throw new Error("No query available");
+          }
+        },
+      })
+    )
   );
 
   // SPARQL implementation
@@ -127,7 +112,11 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
         try {
           const parser = new Parser();
           const response = await fetch(ctx.getString(sparqlUrl), {
-            ...sparqlHeaders,
+            headers: {
+              accept: "application/trig",
+              "content-type": "application/sparql-query",
+            },
+            method: "post",
             body: ctx.getString(query),
           });
           text = await response.text();
@@ -143,7 +132,10 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   // Comunica implementation
   pipe.use(
     mw.when(
-      (ctx) =>  ctx.isEmpty(sparqlUrl) && ctx.isNumber(size) && ctx.getNumber(size) < 20000000,
+      (ctx) =>
+        ctx.isEmpty(sparqlUrl) &&
+        ctx.isNumber(size) &&
+        ctx.getNumber(size) < 20000000,
       async (ctx, next) => {
         const parser = new Parser();
         const response = await fetch(ctx.getString(dataUrl));
@@ -160,7 +152,9 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   // TriplyDb
   pipe.use(
     mw.when(
-      (ctx) => ctx.isEmpty(sparqlUrl) && (!ctx.isNumber(size) || +ctx.getNumber(size) > 20000000),
+      (ctx) =>
+        ctx.isEmpty(sparqlUrl) &&
+        (!ctx.isNumber(size) || +ctx.getNumber(size) > 20000000),
       async (ctx, next) => {
         const acc = await pipe.triplyDb.getAccount();
         var dataSet = await acc.ensureDataset(destinationDatasetName);
@@ -170,7 +164,7 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
         await ensure_query(acc, "default", {
           dataset: dataSet,
           queryString: ctx.getString(query),
-          output: "response"
+          output: "response",
         });
         return next();
       },
