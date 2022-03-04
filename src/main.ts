@@ -59,8 +59,8 @@ select ?size ?dataUrl ?sparqlUrl ?query {
 
     # OOPS: Wrong data model.
     ?dataset dcat:distribution ?sparqlDistribution .
-    ?sparqlDistribution dcat:accessURL ?dsparqlUrl0 .
-    bind(str(?dsparqlUrl0) as ?sparqlUrl)
+    ?sparqlDistribution dcat:accessURL ?sparqlUrl0 .
+    bind(str(?sparqlUrl0) as ?sparqlUrl)
     ?sparqlDistribution dct:format "application/sparql-query" .
   }
 } limit 1`;
@@ -104,7 +104,9 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         key: query,
         value: (_ctx) => {
           if (!localQueryLocation) {
-            throw new Error("No query available");
+            throw new Error(
+              "There is no query available. The metadata does not contain a SPARQL query and there is no local query set."
+            );
           }
           return fs.readFileSync(localQueryLocation, "utf8");
         },
@@ -119,22 +121,35 @@ select ?size ?dataUrl ?sparqlUrl ?query {
       (ctx) => ctx.isNotEmpty(sparqlUrl),
       async (ctx, next) => {
         let text;
+        const parser = new Parser();
+        const url = ctx.getString(sparqlUrl);
+        const sparqlQuery = ctx.getString(query);
+        let response: Response;
         try {
-          const parser = new Parser();
-          const response = await fetch(ctx.getString(sparqlUrl), {
+          response = await fetch(url, {
             headers: {
               accept: "application/trig",
               "content-type": "application/sparql-query",
             },
             method: "post",
-            body: ctx.getString(query),
+            body: sparqlQuery,
           });
+        } catch (error) {
+            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            throw new Error(
+              `Unable to recieve data from sparql url: ${url}.\n ${error.message}.\n  The sparql query returned incorrect results: ${sparqlQuery}`
+            );
+        }
+        try {
           text = await response.text();
           ctx.store.addQuads(parser.parse(text));
         } catch (error) {
-
-          console.log(error, text);
+            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            throw new Error(
+              `Could not parse the linked data from the data url: ${url}.\n ${error.message}.\n The sparql query returned unparsable results: ${sparqlQuery}`
+            );
         }
+
         return next();
       }
     )
@@ -150,9 +165,24 @@ select ?size ?dataUrl ?sparqlUrl ?query {
       [
         async (ctx, next) => {
           const parser = new Parser();
-          const response = await fetch(ctx.getString(dataUrl));
-          const text = await response.text();
-          ctx.store.addQuads(parser.parse(text));
+          const url = ctx.getString(dataUrl);
+          let response: Response;
+          try {
+            response = await fetch(url);
+          } catch (error) {
+            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            throw new Error(
+              `Unable to recieve data from dataUrl: ${url}.\n ${error.message}`
+            );
+          }
+          try {
+            ctx.store.addQuads(parser.parse(await response.text()));
+          } catch (error) {
+            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            throw new Error(
+              `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
+            );
+          }
           return next();
         },
         mw.sparqlConstruct((ctx) => ctx.getString(query), {
@@ -173,13 +203,22 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           const acc = await pipe.triplyDb.getAccount();
           var dataSet = await acc.ensureDataset(destinationDatasetName);
           dataSet = await dataSet.clear("graphs");
-          await dataSet.importFromUrls([ctx.getString(dataUrl)]);
+          const url = ctx.getString(dataUrl);
+          try {
+            await dataSet.importFromUrls([url]);
+          } catch (error) {
+            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            throw new Error(
+              `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
+            );
+          }
           await ensure_service(dataSet, "default");
           await ensure_query(acc, "default", {
             dataset: dataSet,
             queryString: ctx.getString(query),
             output: "response",
           });
+
           return next();
         },
         mw.loadRdf(Ratt.Source.TriplyDb.query("default"), {
