@@ -17,9 +17,10 @@ case ${1} in
       RATT_ARGS+=" --data-dir /home/triply/data"
     fi
     sudo -HEu ${ETL_USER} bash -c "yarn ratt ${RATT_VERBOSITY} ./lib/main.js"
-    ls -lah /home/triply/data/data/
-    ls -lah /home/triply/data/data/rdf/
     ls -lah /home/triply/data/
+    ls -lah /home/triply/data/data/
+    ls -lah /home/triply/data/data/data/
+    ls -lah /home/triply/data/data/data/rdf/
     ;;
   app:test)
     npm run test
