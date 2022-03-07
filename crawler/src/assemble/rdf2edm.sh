@@ -15,10 +15,9 @@ PROCS=${PROCS:-5};
 RDF2EDM="java -Djava.util.logging.config.file=\"logging.properties\" -Dsun.net.inetaddr.ttl=0 ${JVM_ARGS} -cp classes:${CLASSPATH} eu.europeana.commonculture.lod.rdf2edmxml.Rdf2EdmCl"
 
 rm -f ${cmdFile}
-if [ -n "${DESTINATION_DATASET}" ]; then
+if [ -n "${SOURCE_DATASET}" ] && [ -n "${DESTINATION_DATASET}" ]; then
     # We've manually set (at least) the YEAR and TEMPLATE env variables. Assuming we only want to run this one sub-etl
-    echo "${RDF2EDM} /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip"
- >> ${cmdFile}
+    echo "${RDF2EDM} /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip" >> ${cmdFile}
 else
     while read line; do
         SOURCE_DATASET=$(echo "${line}" | awk -F"\t" '{print $1}')
@@ -29,8 +28,7 @@ else
             exit 1
         fi
         LOCAL_QUERY=$(echo "${line}" | awk -F"\t" '{print $3}')
-        echo "${RDF2EDM} /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip"
- >> ${cmdFile}
+        echo "${RDF2EDM} /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip" >> ${cmdFile}
 
     done < <(cat ./configuratie.tsv | sed  1d)
 fi
