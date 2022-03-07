@@ -37,7 +37,7 @@ NUMJOBS=$(cat ${cmdFile} | wc -l)
 echo "Running maximum ${PROCS} jobs in parallel. Total number of sub-ETLs: ${NUMJOBS}"
 JOB_TIMEOUT=21600 # 6 hours in seconds
 set +e # do not exit when a sub-etl fails. That way we still send the assets and log relevant info
-parallel --timeout ${JOB_TIMEOUT} --joblog ./joblog --halt now,fail=1 --verbose --jobs ${PROCS} --tagstring "{#}" < ${cmdFile}
+parallel --timeout ${JOB_TIMEOUT} --joblog ./joblog --halt now,fail=1 --jobs ${PROCS} --tagstring "{#}" < ${cmdFile}
 SUB_ETLS_EXIT_CODE="$?"
 set -e # exit on failures again
 
