@@ -28,7 +28,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-rdf2edm:${DOCKER_IMAGE_TAG} \
-    ./runRdf2Edm.sh
+    ./rdf2edm.sh
   echo "Running ETL after hook"
   docker run --rm \
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
