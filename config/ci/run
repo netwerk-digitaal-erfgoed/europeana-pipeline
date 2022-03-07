@@ -37,7 +37,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG} \
-    ls -lah /home/triply/data/data
+    ls -lah /home/triply/data/data/rdf
 else
   echoerr "Expected ${MODE} to be 'production' or 'acceptance'"
   exit 1;
