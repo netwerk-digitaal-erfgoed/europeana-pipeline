@@ -91,11 +91,6 @@ select ?size ?dataUrl ?sparqlUrl ?query {
 
   pipe.use(mw.fromTsv(pipe.sources.dataset));
   pipe.use(
-    mw.change({
-      key: sparqlUrl,
-      type: "string",
-      change: (_val) => "",
-    }),
     // If the dataset metadata does not yet include a query string,
     // we supply a query string manually.
     mw.when(
