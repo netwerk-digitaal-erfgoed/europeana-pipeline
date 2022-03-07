@@ -15,4 +15,7 @@ WORKDIR /app/crawler
 
 COPY --from=build /app/crawler/target/cc-lod-crawler-DockerApplication .
 
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y parallel \
+    && apt-get clean;
 RUN chmod 777 ./rdf2edm.sh

@@ -29,6 +29,9 @@ RUN sudo -HEu ${ETL_USER} bash ${ETL_DOCKER_BUILD_SCRIPTS}/installNpmDependencie
 
 
 from base as final
+RUN apt-get update \
+    && DEBIAN_FRONTEND=noninteractive apt-get install -y parallel \
+    && apt-get clean;
 COPY --chown=triply:triply . ${ETL_NODE_DIR}
 COPY --from=npmInstall --chown=triply:triply ${ETL_NODE_DIR}/node_modules/ ${ETL_NODE_DIR}/node_modules
 COPY --chown=triply:triply ./config/docker/assets/build/buildPackage.sh ${ETL_DOCKER_BUILD_SCRIPTS}/buildPackage.sh

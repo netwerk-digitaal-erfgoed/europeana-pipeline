@@ -1,6 +1,5 @@
 #!/bin/bash
 set -e
-echo "Running ETL"
 cmdFile=./commands
 if [ -z "${RATT_VERBOSITY}" ]; then
     RATT_VERBOSITY="--verbose"
