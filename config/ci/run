@@ -23,7 +23,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG}
   echo "Running crawler"
   docker run --rm \
-    -v /scratch/edm-conversie-project-${MODE}/rdf:/data \
+    -v /scratch/edm-conversie-project-${MODE}/data/rdf:/data \
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-crawler:${DOCKER_IMAGE_TAG} \
