@@ -1,7 +1,6 @@
 stages:
   - build
   - test
-  # - release
   - runEtl
 
 image: triply/ci:20210723-2
