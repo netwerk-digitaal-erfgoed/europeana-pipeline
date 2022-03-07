@@ -17,7 +17,7 @@ case ${1} in
     if [ -d "/home/triply/data" ]; then
       RATT_ARGS+=" --data-dir /home/triply/data"
     fi
-    sudo -HEu ${ETL_USER} bash -c "yarn ratt ${RATT_ARGS} ./lib/main.js"
+    yarn ratt ${RATT_ARGS} ./lib/main.js
     ;;
   app:test)
     npm run test
