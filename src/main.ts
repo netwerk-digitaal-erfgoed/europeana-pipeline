@@ -3,7 +3,7 @@ import * as fs from "fs-extra";
 import { Ratt, CliContext } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
 import { prefix } from "./helpers/ratt-helpers";
-import { ensure_service, ensure_query } from "./helpers/triplydb-helpers";
+// import { ensure_service, ensure_query } from "./helpers/triplydb-helpers";
 
 const defaultGraph = Ratt.prefixer(
   "https://data.netwerkdigitaalerfgoed.nl/edm/"

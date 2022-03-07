@@ -21,14 +21,14 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG}
-  echo "Running crawler"
-  docker run --rm \
-    -v /scratch/edm-conversie-project-${MODE}/data/data/data/rdf:/data \
-    -e MODE=${MODE} \
-    --name ${CONTAINER_NAME} \
-    ${DOCKER_IMAGE_NAME}-crawler:${DOCKER_IMAGE_TAG} \
-    ls -lah /data
-  echo "Running ETL after hook"
+  # echo "Running crawler"
+  # docker run --rm \
+  #   -v /scratch/edm-conversie-project-${MODE}/data/data/data/rdf:/data \
+  #   -e MODE=${MODE} \
+  #   --name ${CONTAINER_NAME} \
+  #   ${DOCKER_IMAGE_NAME}-crawler:${DOCKER_IMAGE_TAG} \
+  #   ls -lah /data
+  # echo "Running ETL after hook"
   docker run --rm \
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
     -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
@@ -37,7 +37,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG} \
-    ls -lah /home/triply/data/data/data
+    ls -lah /home/triply/data/data/ 
 else
   echoerr "Expected ${MODE} to be 'production' or 'acceptance'"
   exit 1;
