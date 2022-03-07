@@ -13,10 +13,11 @@ case ${1} in
     if [ -z "${RATT_VERBOSITY}" ]; then
       RATT_VERBOSITY="--verbose"
     fi
+    RATT_ARGS="${RATT_VERBOSITY}"
     if [ -d "/home/triply/data" ]; then
       RATT_ARGS+=" --data-dir /home/triply/data"
     fi
-    sudo -HEu ${ETL_USER} bash -c "yarn ratt ${RATT_VERBOSITY} ./lib/main.js"
+    sudo -HEu ${ETL_USER} bash -c "yarn ratt ${RATT_ARGS} ./lib/main.js"
     ls -lah /home/triply/data/
     ls -lah /home/triply/data/rdf/
     ;;
