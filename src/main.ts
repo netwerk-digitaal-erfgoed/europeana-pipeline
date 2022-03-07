@@ -68,6 +68,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
   const datasetRegisterUrl =
     "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry";
   const dataDir = cliContext.dataDir || './data'
+  console.log(`${dataDir}/rdf/${destinationDatasetName}.ttl`)
   const pipe = new Ratt({
     defaultGraph: defaultGraph,
     cliContext: cliContext,
