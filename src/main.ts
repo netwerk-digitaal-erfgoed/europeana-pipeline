@@ -3,7 +3,7 @@ import * as fs from "fs-extra";
 import { Ratt, CliContext } from "@triply/ratt";
 import mw from "@triply/ratt/lib/middlewares";
 import { prefix } from "./helpers/ratt-helpers";
-// import { ensure_service, ensure_query } from "./helpers/triplydb-helpers";
+import { ensure_service, ensure_query } from "./helpers/triplydb-helpers";
 
 const defaultGraph = Ratt.prefixer(
   "https://data.netwerkdigitaalerfgoed.nl/edm/"
@@ -67,7 +67,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
 
   const datasetRegisterUrl =
     "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry";
-
+  const dataDir = cliContext.dataDir || './data'
   const pipe = new Ratt({
     defaultGraph: defaultGraph,
     cliContext: cliContext,
@@ -85,7 +85,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
       }),
     },
     destinations: {
-      dataset: Ratt.Destination.file(`data/rdf/${destinationDatasetName}.ttl`),
+      dataset: Ratt.Destination.file(`${dataDir}/rdf/${destinationDatasetName}.ttl`),
     },
   });
 
@@ -200,24 +200,24 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         (!ctx.isNumber(size) || +ctx.getNumber(size) > maxComunicaSize),
       [
         async (ctx, next) => {
-          // const acc = await pipe.triplyDb.getAccount();
-          // var dataSet = await acc.ensureDataset(destinationDatasetName);
-          // dataSet = await dataSet.clear("graphs");
-          // const url = ctx.getString(dataUrl);
-          // try {
-          //   await dataSet.importFromUrls([url]);
-          // } catch (error) {
-          //   if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
-          //   throw new Error(
-          //     `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
-          //   );
-          // }
-          // await ensure_service(dataSet, "default");
-          // await ensure_query(acc, "default", {
-          //   dataset: dataSet,
-          //   queryString: ctx.getString(query),
-          //   output: "response",
-          // });
+          const acc = await pipe.triplyDb.getAccount();
+          var dataSet = await acc.ensureDataset(destinationDatasetName);
+          dataSet = await dataSet.clear("graphs");
+          const url = ctx.getString(dataUrl);
+          try {
+            await dataSet.importFromUrls([url]);
+          } catch (error) {
+            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            throw new Error(
+              `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
+            );
+          }
+          await ensure_service(dataSet, "default");
+          await ensure_query(acc, "default", {
+            dataset: dataSet,
+            queryString: ctx.getString(query),
+            output: "response",
+          });
 
           return next();
         },
