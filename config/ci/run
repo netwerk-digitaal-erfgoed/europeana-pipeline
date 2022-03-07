@@ -11,7 +11,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
   #remove other runs when needed. Otherwise, we'd have duplicate runs working on the same directory
   docker rm -f ${CONTAINER_NAME} 2> /dev/null || true
   echo "Running ETL"
-  docker run --rm \
+  docker run \
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
     -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
     -e TRIPLYDB_ACCOUNT=${TRIPLYDB_ACCOUNT} \
@@ -22,14 +22,14 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG}
   echo "Running crawler"
-  docker run --rm \
+  docker run \
     -v /scratch/edm-conversie-project-${MODE}/rdf:/data \
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-crawler:${DOCKER_IMAGE_TAG} \
-    ls -lah /home/triply/data && ./rdf2edm.sh -input_file /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip
+    ls / && ls -lah /data && ls -lah . && ./rdf2edm.sh -input_file /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip
   echo "Running ETL after hook"
-  docker run --rm \
+  docker run \
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
     -e TRIPLYDB_TOKEN=${TRIPLYDB_TOKEN} \
     -e TRIPLYDB_ACCOUNT=${TRIPLYDB_ACCOUNT} \
