@@ -32,7 +32,7 @@ else
     while read line; do
         SOURCE_DATASET=$(echo "${line}" | awk -F"\t" '{print $1}')
         DESTINATION_DATASET=$(echo "${line}" | awk -F"\t" '{print $2}')
-        if [ -z "${SOURCE_DATASET}" ] || [-z "${DESTINATION_DATASET}" ]; then
+        if [ -z "${SOURCE_DATASET}" ] || [ -z "${DESTINATION_DATASET}" ]; then
             # a sanity check, to make sure the configuration file is tab delimited
             echo "Could not detect template variable in configuration.tsv file. Is the file really tab-delimited?"
             exit 1
