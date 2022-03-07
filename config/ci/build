@@ -10,7 +10,7 @@ fi
 source ./config/ci/.env
 if [ "${TARGET}" = "etl" ]; then
   DOCKER_IMAGE_NAME+="-etl"
-  DOCKER_FILE=./config/docker/Dockerfile
+  DOCKER_FILE="./config/docker/Dockerfile"
 elif [ "${TARGET}" = "rdf2edm" ]; then
   DOCKER_IMAGE_NAME+="-rdf2edm"
   DOCKER_FILE="./crawler/Dockerfile"
@@ -31,7 +31,7 @@ docker build \
     ${DOCKER_ARG} \
     --build-arg "NPM_TOKEN=${NPM_TOKEN}" \
     --build-arg "BUILD_REF=${CI_COMMIT_REF_NAME}" \
-    --build-arg BUILD_DATE="${now}" \
+    --build-arg "BUILD_DATE=${now}" \
     --build-arg "COMMIT_SHA=${CI_COMMIT_SHA}" \
     -t ${DOCKER_IMAGE_NAME}:${DOCKER_IMAGE_TAG} \
     .
