@@ -13,9 +13,9 @@ fi
 rm -f ./joblog #clear log file
 
 TARGET=${1}
-if ["${TARGET}" = "main"]; then
+if [ "${TARGET}" = "main" ]; then
   ETL="lib/main.js"
-elif ["${TARGET}" = "after"]; then
+elif [ "${TARGET}" = "after" ]; then
   ETL="lib/after.js"
 else
   echo "Argument ${TARGET} not recognized"
