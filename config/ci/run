@@ -20,14 +20,15 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -e DESTINATION_DATASET=${DESTINATION_DATASET} \
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
-    ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG}
-  echo "Running crawler"
+    ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG} \
+    ./config/runEtl.sh main
+  echo "Running rdf to EDM"
   docker run --rm \
     -v /scratch/edm-conversie-project-${MODE}/rdf:/data \
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
-    ${DOCKER_IMAGE_NAME}-crawler:${DOCKER_IMAGE_TAG} \
-    ./rdf2edm.sh -input_file /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip
+    ${DOCKER_IMAGE_NAME}-rdf2edm:${DOCKER_IMAGE_TAG} \
+    ./runRdf2Edm.sh
   echo "Running ETL after hook"
   docker run --rm \
     -v /scratch/edm-conversie-project-${MODE}:/home/triply/data \
@@ -37,7 +38,7 @@ if [ "${MODE}" = "acceptance" ] || [ "${MODE}" = "production" ]; then
     -e MODE=${MODE} \
     --name ${CONTAINER_NAME} \
     ${DOCKER_IMAGE_NAME}-etl:${DOCKER_IMAGE_TAG} \
-    yarn ratt --verbose --data-dir /home/triply/data ./lib/after.js
+    ./config/runEtl.sh after
 else
   echoerr "Expected ${MODE} to be 'production' or 'acceptance'"
   exit 1;

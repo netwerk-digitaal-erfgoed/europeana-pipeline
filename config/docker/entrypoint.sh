@@ -10,14 +10,7 @@ case ${1} in
   app:run)
     #make sure the output dir is accessible
     chown ${ETL_USER}:${ETL_USER} ${ETL_DATA_DIR}
-    if [ -z "${RATT_VERBOSITY}" ]; then
-      RATT_VERBOSITY="--verbose"
-    fi
-    RATT_ARGS="${RATT_VERBOSITY}"
-    if [ -d "/home/triply/data" ]; then
-      RATT_ARGS+=" --data-dir /home/triply/data"
-    fi
-    yarn ratt ${RATT_ARGS} ./lib/main.js
+    ./config/runEtl.sh
     ;;
   app:test)
     npm run test

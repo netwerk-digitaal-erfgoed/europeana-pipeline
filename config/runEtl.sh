@@ -1,24 +1,34 @@
 #!/bin/bash
 set -e
-echo "running RDF 2 EDM ETL"
+echo "Running ETL"
 cmdFile=./commands
+if [ -z "${RATT_VERBOSITY}" ]; then
+    RATT_VERBOSITY="--verbose"
+fi
+RATT_ARGS="${RATT_VERBOSITY}"
 
-CLASSPATH=
-for jar in `ls lib/*.jar`
-do
-  CLASSPATH=$CLASSPATH:$jar
-done
-CLASSPATH=$CLASSPATH
+if [ -d "/home/triply/data" ]; then
+    RATT_ARGS+=" --data-dir /home/triply/data"
+fi
+rm -f ./joblog #clear log file
+
+TARGET=${1}
+if ["${TARGET}" = "main"]; then
+  ETL="lib/main.js"
+elif ["${TARGET}" = "after"]; then
+  ETL="lib/after.js"
+else
+  echo "Argument ${TARGET} not recognized"
+  exit 1
+fi
+
+RATT_CMD="yarn ratt ${RATT_ARGS} ${ETL}"
 
 PROCS=${PROCS:-5};
-
-RDF2EDM="java -Djava.util.logging.config.file=\"logging.properties\" -Dsun.net.inetaddr.ttl=0 ${JVM_ARGS} -cp classes:${CLASSPATH} eu.europeana.commonculture.lod.rdf2edmxml.Rdf2EdmCl"
-
 rm -f ${cmdFile}
 if [ -n "${SOURCE_DATASET}" ] && [ -n "${DESTINATION_DATASET}" ]; then
     # We've manually set (at least) the YEAR and TEMPLATE env variables. Assuming we only want to run this one sub-etl
-    echo "${RDF2EDM} /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip"
- >> ${cmdFile}
+    echo "SOURCE_DATASET=${SOURCE_DATASET} DESTINATION_DATASET=${DESTINATION_DATASET} LOCAL_QUERY=${LOCAL_QUERY} ${RATT_CMD}" >> ${cmdFile}
 else
     while read line; do
         SOURCE_DATASET=$(echo "${line}" | awk -F"\t" '{print $1}')
@@ -29,8 +39,7 @@ else
             exit 1
         fi
         LOCAL_QUERY=$(echo "${line}" | awk -F"\t" '{print $3}')
-        echo "${RDF2EDM} /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip"
- >> ${cmdFile}
+        echo "SOURCE_DATASET=${SOURCE_DATASET} DESTINATION_DATASET=${DESTINATION_DATASET} LOCAL_QUERY=${LOCAL_QUERY} ${RATT_CMD}" >> ${cmdFile}
 
     done < <(cat ./configuratie.tsv | sed  1d)
 fi

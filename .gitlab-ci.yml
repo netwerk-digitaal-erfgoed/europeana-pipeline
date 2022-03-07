@@ -17,10 +17,10 @@ build-etl:
   only:
     variables:
       - $MODE == null
-build-crawler:
+build-rdf2edm:
   stage: build
   script:
-    - ./config/ci/build crawler
+    - ./config/ci/build rdf2edm
   only:
     variables:
       - $MODE == null
