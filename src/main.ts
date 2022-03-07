@@ -200,24 +200,24 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         (!ctx.isNumber(size) || +ctx.getNumber(size) > maxComunicaSize),
       [
         async (ctx, next) => {
-          const acc = await pipe.triplyDb.getAccount();
-          var dataSet = await acc.ensureDataset(destinationDatasetName);
-          dataSet = await dataSet.clear("graphs");
-          const url = ctx.getString(dataUrl);
-          try {
-            await dataSet.importFromUrls([url]);
-          } catch (error) {
-            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
-            throw new Error(
-              `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
-            );
-          }
-          await ensure_service(dataSet, "default");
-          await ensure_query(acc, "default", {
-            dataset: dataSet,
-            queryString: ctx.getString(query),
-            output: "response",
-          });
+          // const acc = await pipe.triplyDb.getAccount();
+          // var dataSet = await acc.ensureDataset(destinationDatasetName);
+          // dataSet = await dataSet.clear("graphs");
+          // const url = ctx.getString(dataUrl);
+          // try {
+          //   await dataSet.importFromUrls([url]);
+          // } catch (error) {
+          //   if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+          //   throw new Error(
+          //     `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
+          //   );
+          // }
+          // await ensure_service(dataSet, "default");
+          // await ensure_query(acc, "default", {
+          //   dataset: dataSet,
+          //   queryString: ctx.getString(query),
+          //   output: "response",
+          // });
 
           return next();
         },
