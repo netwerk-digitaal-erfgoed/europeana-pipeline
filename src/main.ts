@@ -67,7 +67,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
 
   const datasetRegisterUrl =
     "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry";
-  const dataDir = cliContext.dataDir || './data'
+  const dataDir = cliContext.dataDir || "./data";
   const pipe = new Ratt({
     defaultGraph: defaultGraph,
     cliContext: cliContext,
@@ -83,9 +83,12 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           method: "post",
         },
       }),
+      shaclShapes: Ratt.Source.file("static/shapes/shacl_edm.ttl"),
     },
     destinations: {
-      dataset: Ratt.Destination.file(`${dataDir}/rdf/${destinationDatasetName}.ttl`),
+      dataset: Ratt.Destination.file(
+        `${dataDir}/rdf/${destinationDatasetName}.ttl`
+      ),
     },
   });
 
@@ -130,19 +133,25 @@ select ?size ?dataUrl ?sparqlUrl ?query {
             body: sparqlQuery,
           });
         } catch (error) {
-            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+          if (!(error instanceof Error))
             throw new Error(
-              `Unable to recieve data from sparql url: ${url}.\n ${error.message}.\n  The sparql query returned incorrect results: ${sparqlQuery}`
+              "We are throwing an incorrect error object as an error."
             );
+          throw new Error(
+            `Unable to recieve data from sparql url: ${url}.\n ${error.message}.\n  The sparql query returned incorrect results: ${sparqlQuery}`
+          );
         }
         try {
           text = await response.text();
           ctx.store.addQuads(parser.parse(text));
         } catch (error) {
-            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+          if (!(error instanceof Error))
             throw new Error(
-              `Could not parse the linked data from the data url: ${url}.\n ${error.message}.\n The sparql query returned unparsable results: ${sparqlQuery}`
+              "We are throwing an incorrect error object as an error."
             );
+          throw new Error(
+            `Could not parse the linked data from the data url: ${url}.\n ${error.message}.\n The sparql query returned unparsable results: ${sparqlQuery}`
+          );
         }
 
         return next();
@@ -165,7 +174,10 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           try {
             response = await fetch(url);
           } catch (error) {
-            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            if (!(error instanceof Error))
+              throw new Error(
+                "We are throwing an incorrect error object as an error."
+              );
             throw new Error(
               `Unable to recieve data from dataUrl: ${url}.\n ${error.message}`
             );
@@ -173,7 +185,10 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           try {
             ctx.store.addQuads(parser.parse(await response.text()));
           } catch (error) {
-            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            if (!(error instanceof Error))
+              throw new Error(
+                "We are throwing an incorrect error object as an error."
+              );
             throw new Error(
               `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
             );
@@ -202,7 +217,10 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           try {
             await dataSet.importFromUrls([url]);
           } catch (error) {
-            if (!(error instanceof Error)) throw new Error("We are throwing an incorrect error object as an error.")
+            if (!(error instanceof Error))
+              throw new Error(
+                "We are throwing an incorrect error object as an error."
+              );
             throw new Error(
               `Could not parse the linked data from the data url: ${url}.\n ${error.message}`
             );
@@ -221,6 +239,14 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         }),
       ]
     )
+  );
+
+  pipe.use(
+    mw.validateShacl(pipe.sources.shaclShapes, {
+      graphs: [defaultGraph("edm")],
+      terminateOn: "Never",
+      report: { destination: pipe.destinations.dataset },
+    })
   );
 
   pipe.use(mw.toRdf(pipe.destinations.dataset));

@@ -11,8 +11,8 @@ source ./config/ci/.env
 if [ "${TARGET}" = "etl" ]; then
   DOCKER_IMAGE_NAME+="-etl"
   DOCKER_FILE="./config/docker/Dockerfile"
-elif [ "${TARGET}" = "rdf2edm" ]; then
-  DOCKER_IMAGE_NAME+="-rdf2edm"
+elif [ "${TARGET}" = "crawler" ]; then
+  DOCKER_IMAGE_NAME+="-crawler"
   DOCKER_FILE="./crawler/Dockerfile"
 else
   echo "Argument ${TARGET} not recognized"

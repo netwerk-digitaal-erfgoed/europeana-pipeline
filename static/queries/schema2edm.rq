@@ -93,10 +93,10 @@ WHERE {
          ?uri_cho schema:provider ?dataProvider
       }
       OPTIONAL { ?uri_cho schema:publisher ?publisher }
-      OPTIONAL { ?uri_cho schema:sameAs ?sameAs }
-      OPTIONAL { ?uri_cho schema:spatial ?spatial }
-      OPTIONAL { ?uri_cho schema:temporal ?temporal }
-      OPTIONAL { ?uri_cho schema:material ?material }
+      # OPTIONAL { ?uri_cho schema:sameAs ?sameAs }
+      # OPTIONAL { ?uri_cho schema:spatial ?spatial }
+      # OPTIONAL { ?uri_cho schema:temporal ?temporal }
+      # OPTIONAL { ?uri_cho schema:material ?material }
       OPTIONAL {
         # Europeana requires valid URI for edm:isShownAt
         ?uri_cho schema:url ?url

@@ -1,2 +1,2 @@
 SOURCE_DATASET	DESTINATION_DATASET	LOCAL_QUERY
-http://data.bibliotheken.nl/id/dataset/rise-centsprenten	riseCentsprenten	queries/schema2edm.rq
+http://data.bibliotheken.nl/id/dataset/rise-centsprenten	riseCentsprenten	static/queries/schema2edm.rq

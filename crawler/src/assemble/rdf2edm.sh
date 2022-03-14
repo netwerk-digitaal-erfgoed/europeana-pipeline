@@ -16,7 +16,7 @@ RDF2EDM="java -Djava.util.logging.config.file=\"logging.properties\" -Dsun.net.i
 
 rm -f ${cmdFile}
 if [ -n "${SOURCE_DATASET}" ] && [ -n "${DESTINATION_DATASET}" ]; then
-    # We've manually set (at least) the YEAR and TEMPLATE env variables. Assuming we only want to run this one sub-etl
+    # We've manually set (at least) the SOURCE_DATASET and DESTINATION_DATASET env variables. Assuming we only want to run this one sub-etl
     echo "${RDF2EDM} -input_file /data/${DESTINATION_DATASET}.ttl -output_file /data/${DESTINATION_DATASET}.xml.zip" >> ${cmdFile}
 else
     while read line; do
