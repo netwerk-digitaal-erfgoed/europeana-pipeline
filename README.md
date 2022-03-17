@@ -26,13 +26,13 @@ Steps 1-4 and 6 have been written with RATT, a TypeScript library designed for h
 
 ## 1. Local installation and building
 
-In order to run of develop the pipeline and publish datas to an online data catalog the pipeline must first be configured. This is done with the following steps:
+In order to run of develop the pipeline and publish dataset to an online data catalog the pipeline must first be configured. This is done with the following steps:
 
-1. If you haven't configured your environment for running TypeScript at all, you should first install Node.js and Yarn.
+1. If you haven't configured your environment for running Typescript at all, you should first install Node.js and Yarn.
 
 2. We are then installing the `node.js` dependencies by running the `yarn` command.
 
-3. Finally the `yarn build` command to transpile the TypeScript files in the `src/` directory into JavaScript files. This concludes the TypeScript part of the pipeline.
+3. Finally the `yarn build` command to transpile the Typescript files in the `src/` directory into JavaScript files. This concludes the Typescript part of the pipeline.
 
 4. Next to TypeScript the pipeline will also make use of a JAVA jar. For active development on the JAVA part of the repository you will need to install [JAVA](https://java.com/en/download/help/download_options.html) and [maven](https://maven.apache.org/install.html).
 
@@ -47,6 +47,8 @@ To develop and run the pipeline locally the correct environment variables have t
 - `LOCAL_QUERY` :: The location where the transformation can be found.  Notice that this is only used when the source dataset does not include a transformation query in its metadata.
 - `TRIPLYDB_TOKEN` :: Set the default TriplyDB token; should be aligned with the host TriplyDB instance. The token must have at least read and write access. To create your API Token you can follow the guidelines to [create and configure and API Token](https://triply.cc/docs/api-token).
 
+The `SOURCE_DATASET`,`DESTINATION_DATASET` and `LOCAL_QUERY` can also be set in the `configuration.tsv`. The `configuration.tsv` will contain all NDE Dataset Registry datasets that can be transformed to the Europeana linked data format. (see [Section 4.1](#section-4-1) for expanding the configuration file. Only local development from the command line will make use of the environment variables. The docker containers will always use the `configuration.tsv`.
+
 ### 2.1 Running the pipeline from the command line
 
 The pipeline is configured to both run from a docker container as well as running outside the docker container from the command line. Running the pipeline from the commandline instead of the docker containers greatly improves debuggability of the pipeline, and makes it easier to test a single dataset.
@@ -55,10 +57,10 @@ To run the pipeline from the command line the environment variables need to be s
 
 #### 2.1.1 Transpile the code
 
-The first steps of the pipeline are written in TypeScript, but are executed in JavaScript. The following command transpiles your TypeScript code into the corresponding JavaScript code: `yarn build`
-Some developers do not want to repeatedly write the `yarn build` command.  By running the following command, transpilation is performed automatically whenever one or more TypeScript files are changed: `yarn dev`
+The first steps of the pipeline are written in Typescript, but are executed in JavaScript. The following command transpiles your Typescript code into the corresponding JavaScript code: `yarn build`
+Some developers do not want to repeatedly write the `yarn build` command.  By running the following command, transpilation is performed automatically whenever one or more Typescript files are changed: `yarn dev`
 
-The pipeline step developed in JAVA also needs to be transpiled. This can be done by entering the `crawler` directory from the commandline and executing the command: `mvn --quiet -e -f ./pom.xml clean assembly:assembly` This will transpile the JAVA code in a JAR executable.
+The pipeline step developed in JAVA also needs to be transpiled. This can be done by entering the `crawler` directory from the command line and executing the command: `mvn --quiet -e -f ./pom.xml clean assembly:assembly` This will transpile the JAVA code in a JAR executable.
 
 #### 2.1.2 Running steps 1 through 4
 
@@ -72,14 +74,18 @@ This command will retrieve the dataset metadata from the `SOURCE_DATASET` enviro
 
 #### 2.1.3 Running the JAR executable
 
+To run the rdf2edm locally we need to move to the correct library to run the JAR, which will be executed by running the bash script on the second line.
+
 ```sh
 cd crawler/target/
 ./cc-lod-crawler-DockerApplication/rdf2edm-local.sh
 ```
 
+The bash script runs the JAR that transforms the linked data file to the format Europeana can ingest. The  
+
 #### 2.1.4 Running the after step
 
-The following command runs the final part of the pipeline:
+The following command runs the final part of the pipeline moving back to the main folder, the afterhook for uploading the xml assets and the linked data.
 
 ```sh
 cd ../../
@@ -88,7 +94,7 @@ yarn ratt ./lib/after.js
 
 This will upload the linked data to the `DESTINATION_DATASET` on the instance where the `TRIPLYDB_TOKEN` was created. The EDM xml files will be uploaded to the same `DESTINATION_DATASET` as a zipped asset.
 
-#### 2.1.5 Running complete pipeline locally
+#### 2.1.5 Running complete pipeline from the command line
 
 Sometimes you want to run the entire pipeline in a single command. To run the pipeline you can copy paste the following set of commands:
 
@@ -129,7 +135,7 @@ docker run --rm \
       ./config/runEtl.sh main
 ```
 
-4. We can now run the seperate docker image for step 5. Do note that we share volumes again. We need to transfer the linked data file, saving us from uploading and downloading the file.
+4. We can now run the separate docker image for step 5. Do note that we share volumes again. We need to transfer the linked data file, saving us from uploading and downloading the file.
 
 ```sh
 docker run --rm \
@@ -143,7 +149,7 @@ docker run --rm \
       ./rdf2edm.sh
 ```
 
-5. Let's run the docker container with containing the last step. This is the same container as the first 4 steps only running the after hook of the container instead of the main etl.
+5. Let's run the docker container with the last step. This is the same container as the first 4 steps only running the after hook of the container instead of the main etl.
 ```sh
 docker run --rm \
       -v /scratch/edm-conversie-project-acceptance:/home/triply/data \
@@ -161,10 +167,11 @@ docker run --rm \
 
 The `gitlab-ci.yml` contains the necessary instructions for the gitlab CI to run the docker images in the CI/CD pipeline. The `.yml` file contains the build and execution procedures both docker images and for running the images in Acceptance or Production mode.
 
+<h3 id='section-4-1'>4.1 Expanding the transformed dataset list</h3>
+
 To accommodate for transforming multiple datasets in a single go the repository also has a `configuration.tsv` file. The tab delimited file contains the different variables that need to be set per dataset and can be easily expanded.
 
 At the moment the tsv has the following headers:`SOURCE_DATASET`,`DESTINATION_DATASET`,`LOCAL_QUERY` corresponding with the environment variables needed to be set. The CI/CD and the local docker images will use the configuration file if the header variables have not been set. To run the docker images locally with the `configuration.tsv` file. Remove the environment variables (`SOURCE_DATASET`,`DESTINATION_DATASET`,`LOCAL_QUERY`) from the docker commands when running the docker images from the command line. The docker images will automatically use the `configuration.tsv` file.
-
 
 
 ## 4. Acceptance/Production mode
