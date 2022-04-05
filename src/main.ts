@@ -126,7 +126,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         try {
           response = await fetch(url, {
             headers: {
-              accept: "application/trig",
+              accept: "application/trig, text/turtle",
               "content-type": "application/sparql-query",
             },
             method: "post",
