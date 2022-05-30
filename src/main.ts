@@ -41,7 +41,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
   ?distribution dct:format ?format .
   ?distribution dcat:accessURL ?dataUrl0 .
   bind(str(?dataUrl0) as ?dataUrl)
-  filter(?format in ("application/n-quads", "application/n-triples", "application/trig", "application/turtle", "text/n3", "text/turtle"))
+  filter(?format in ("application/n-quads", "application/n-triples", "application/trig", "application/turtle", "text/n3", "text/turtle", "application/sparql-query"))
   optional {
     ?distribution dcat:byteSize ?size0.
     bind(xsd:integer(?size0) as ?size)
