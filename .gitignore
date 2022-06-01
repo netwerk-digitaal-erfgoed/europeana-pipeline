@@ -5,7 +5,7 @@ node_modules
 npm-debug.log*
 package-lock.json
 report.ttl.gz
-
+work
 # Only keep the root ‘envrc’ and RATT files in version history.
 # This is purposefully strict to avoid accidentally committing private credentials
 .envrc-*

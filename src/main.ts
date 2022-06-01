@@ -23,6 +23,7 @@ export default async function (cliContext: CliContext): Promise<Ratt> {
   // RATT context
   const sourceDatasetName = process.env.SOURCE_DATASET;
   const destinationDatasetName = process.env.DESTINATION_DATASET;
+  const shaclReportName = process.env.SHACL_REPORT;
   const localQueryLocation = process.env.LOCAL_QUERY;
   if (!sourceDatasetName)
     throw new Error("Expected environment variable SOURCE_DATASET to be set");
@@ -89,6 +90,9 @@ select ?size ?dataUrl ?sparqlUrl ?query {
       dataset: Ratt.Destination.file(
         `${dataDir}/rdf/${destinationDatasetName}.ttl`
       ),
+      report: Ratt.Destination.file(
+        `${dataDir}/rdf/${shaclReportName}.ttl`
+      )
     },
   });
 
@@ -243,9 +247,9 @@ select ?size ?dataUrl ?sparqlUrl ?query {
 
   pipe.use(
     mw.validateShacl(pipe.sources.shaclShapes, {
-      graphs: [defaultGraph("edm")],
+      //graphs: [defaultGraph("edm")],
       terminateOn: "Never",
-      report: { destination: pipe.destinations.dataset },
+      report: { destination: pipe.destinations.report },
     })
   );
 

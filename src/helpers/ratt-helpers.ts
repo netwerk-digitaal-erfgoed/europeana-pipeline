@@ -1,7 +1,6 @@
 import { Ratt } from "@triply/ratt";
 
 export const prefix = {
-  aat: Ratt.prefixer('http://vocab.getty.edu/aat/'),
   adms_assetType: Ratt.prefixer('http://purl.org/adms/assettype/'),
   adms_status: Ratt.prefixer('http://purl.org/adms/status/'),
   bibo: Ratt.prefixer('http://purl.org/ontology/bibo/'),
@@ -37,4 +36,8 @@ export const prefix = {
   vs: Ratt.prefixer('http://www.w3.org/2003/06/sw-vocab-status/ns#'),
   wgs84: Ratt.prefixer('http://www.w3.org/2003/01/geo/wgs84_pos#'),
   xsd: Ratt.prefixer('http://www.w3.org/2001/XMLSchema#'),
+  edm: Ratt.prefixer('http://www.europeana.eu/schemas/edm/'),
+  wd: Ratt.prefixer('http://www.wikidata.org/entity/'),
+  dc: Ratt.prefixer('http://purl.org/dc/elements/1.1/'),
+  aat: Ratt.prefixer('http://vocab.getty.edu/aat/'),
 }

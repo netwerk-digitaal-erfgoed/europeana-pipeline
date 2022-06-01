@@ -8,12 +8,8 @@
 #   on https://data.netwerkdigitaalerfgoed.nl/ and put it in your .bashrc file) 
 # - Run from root of repository, eg. bash ./static/scripts/albac.bijdrage.sh
 
-export SOURCE_DATASET="http://data.bibliotheken.nl/id/dataset/albac"
-export DESTINATION_DATASET="albacbijdrage"
-export LOCAL_QUERY="static/queries/schema2edm.albac.bijdrage.rq"
-
-if [[ -z "${TRIPLYDB_TOKEN}" ]]; then
-	echo "ERROR: TRIPLYDB_TOKEN not set as environment variable, quitting"
+if [[ -z "${TRIPLYDB_TOKEN}" || -z "${SOURCE_DATASET}" || -z "${DESTINATION_DATASET}" || -z "${LOCAL_QUERY}" || -z "${SHACL_REPORT}" ]]; then
+	echo "ERROR: one or more environment variables not set, use run 'europeana-pipeline/.envrc' to configure them, quitting"
 	exit
 fi
 
@@ -37,6 +33,7 @@ docker run --rm \
 	  -e LOCAL_QUERY=${LOCAL_QUERY} \
 	  -e SOURCE_DATASET=${SOURCE_DATASET} \
 	  -e DESTINATION_DATASET=${DESTINATION_DATASET} \
+	  -e SHACL_REPORT \
 	  -e MODE=acceptance \
 	  --name edm-conversie-project-acceptance \
 	  edm-conversie-crawler \

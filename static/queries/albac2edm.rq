@@ -1,0 +1,136 @@
+PREFIX schema:  <http://schema.org/>
+PREFIX rdf:     <http://www.w3.org/1999/02/22-rdf-syntax-ns#>
+PREFIX rdfs:    <http://www.w3.org/2000/01/rdf-schema#>
+PREFIX owl:     <http://www.w3.org/2002/07/owl#>
+PREFIX dc:      <http://purl.org/dc/elements/1.1/>
+PREFIX dcterms: <http://purl.org/dc/terms/>
+PREFIX skos:    <http://www.w3.org/2004/02/skos/core#>
+PREFIX void:    <http://rdfs.org/ns/void#>
+PREFIX schema:  <http://schema.org/>
+PREFIX edm:     <http://www.europeana.eu/schemas/edm/>
+PREFIX ore:     <http://www.openarchives.org/ore/terms/>
+PREFIX albac:   <http://data.bibliotheken.nl/id/albac/>
+
+CONSTRUCT {
+    ?uri_cho a edm:ProvidedCHO ;
+         edm:type ?edm_type ;
+         dc:creator ?creator ;
+         dc:contributor ?contributor ;
+         dc:description ?description ;
+         dc:type ?genre ;
+         dc:subject ?subject ;
+         dc:title ?name ;
+         dcterms:alternative ?altName ;
+         dc:publisher ?publisher ;
+         owl:sameAs ?sameAs ;
+         dcterms:spatial ?spatial ;
+         dcterms:temporal ?temporal ;
+         dcterms:isPartOf ?isPartOf ;
+         dc:language ?language ;
+         dcterms:medium ?material .   
+
+    ?uri_ore a ore:Aggregation ;
+         edm:aggregatedCHO ?uri_cho ;
+         edm:provider ?provider ;
+         edm:dataProvider ?dataProvider ;
+         edm:rights ?license ;
+         edm:hasView ?imageUrl ;
+         edm:isShownAt ?isShownAt ;
+         edm:isShownBy ?isShownBy .
+
+}
+WHERE {
+
+    {
+      SELECT  *  {
+
+        # allow only resources in from albac dataset
+        ?uri_cho schema:mainEntityOfPage [schema:isPartOf <http://data.bibliotheken.nl/id/dataset/albac> ] .
+
+        # CreativeWorks not of type schema:Book are treated as images
+        {
+	     ?uri_cho a ?type .
+          VALUES ?type { schema:CreativeWork }
+          BIND(("IMAGE") as ?edm_type )
+          FILTER NOT EXISTS {
+               ?uri_cho a schema:Book
+          }
+        }
+        UNION 
+        # the schema:Book type is the main resource and type as a Europeana 'TEXT' type 
+        {
+          ?uri_cho a schema:Book .
+          BIND(("TEXT") as ?edm_type )
+
+          # hack because type TEXT resource require a language definition
+          BIND(("nl") as ?language )
+        } 
+
+        # Generate an "URI_CHO#agg" URI pointing to a ore:Aggregation resource. 
+        BIND( URI(CONCAT(STR(?uri_cho),"#agg")) as ?uri_ore)
+
+        # provider and dataprovider both set to KB, correct?
+        BIND( STR('KB') as ?provider)
+        BIND( STR('KB') as ?dataProvider)
+
+        # creator are given as URIs
+        OPTIONAL { ?uri_cho schema:creator ?creator }
+
+        # contributor are given as blank nodes so we collect the name
+        OPTIONAL { ?uri_cho schema:contributor/schema:name ?contributor }
+        OPTIONAL { ?uri_cho schema:description ?description }
+        OPTIONAL { ?uri_cho schema:genre ?genre }
+        OPTIONAL { ?uri_cho schema:name ?name }
+
+        # for contributions the license field exists as a property of schema:image 
+        OPTIONAL { ?uri_cho schema:image/schema:license ?license }
+
+        # for the schema:Book the license field is given in the schema:mainEntityOfPage
+        OPTIONAL { ?uri_cho schema:mainEntityOfPage/schema:license ?license }
+
+        # there is no landing page in the data, which is required when no there is 
+        # no link to an image URI. So in this case we use the LOD html page as 
+        # landing page
+        OPTIONAL { ?uri_cho schema:mainEntityOfPage/schema:mainEntity ?isShownAt }
+        OPTIONAL { ?uri_cho schema:publisher ?publisher }
+        OPTIONAL { ?uri_cho schema:sameAs ?sameAs }
+        OPTIONAL { ?uri_cho schema:locationCreated ?spatial }
+        OPTIONAL { ?uri_cho schema:dateCreated ?temporal }
+
+        ## NB: dirty hack because schema:material refers to a URI but 
+        ## EDM require a string type for dcterms:medium
+        OPTIONAL { 
+          ?uri_cho schema:material ?materialUri
+          BIND(IF(?materialUri = <http://vocab.getty.edu/aat/300014109>,"papier",
+               IF(?materialUri = <http://vocab.getty.edu/aat/300015012>,"inkt",
+               IF(?materialUri = <http://vocab.getty.edu/aat/300227525>,"kalfsleer",
+               IF(?materialUri = <http://vocab.getty.edu/aat/300011845>,"leer",
+               IF(?materialUri = <http://vocab.getty.edu/aat/300391345>,"imitatie bladgoud",
+               IF(?materialUri = <http://vocab.getty.edu/aat/300227857>,"marokijnleer","onbekend")))))) as ?material)
+        }
+        OPTIONAL { ?uri_cho schema:isPartOf ?isPartOf }
+        OPTIONAL {
+          # collect the URI for the images 
+          ?uri_cho schema:image/schema:contentUrl ?image
+          BIND(IRI(?image) as ?imageUrl)
+        }
+     }
+   }
+   UNION 
+   {
+      # because multiple images exists for contributions 
+      # a sample of one is taken because isShownBy is only
+      # allowed to have one value, all the images are 
+      # stored into edm:hasView
+      SELECT ?uri_cho ?uri_ore(SAMPLE(?imageUrl) as ?isShownBy) {
+        ?uri_cho schema:mainEntityOfPage [schema:isPartOf <http://data.bibliotheken.nl/id/dataset/albac> ] .
+        #?uri_cho a schema:CreativeWork  .
+        BIND( URI(CONCAT(STR(?uri_cho),"#agg")) as ?uri_ore)
+        OPTIONAL {
+          # Europeana requires valid URI for edm:isShownBy 
+          ?uri_cho schema:image/schema:contentUrl ?image
+          BIND(IRI(?image) as ?imageUrl)
+        }
+    }
+  }
+}

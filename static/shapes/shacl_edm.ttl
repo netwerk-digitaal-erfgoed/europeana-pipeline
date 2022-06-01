@@ -7,6 +7,8 @@
 @prefix edm:     <http://www.europeana.eu/schemas/edm/> .
 @prefix ore:     <http://www.openarchives.org/ore/terms/> .
 
+# see Europeana documentation for the EDM constraints:
+# https://pro.europeana.eu/files/Europeana_Professional/Share_your_data/Technical_requirements/EDM_Documentation/EDM_Mapping_Guidelines_v2.4_102017.pdf
 ex:hasLang sh:or (
    [ sh:not [ sh:path edm:type ;
        sh:datatype xsd:string ;
@@ -31,6 +33,10 @@ ex:ProvidedCHO a sh:NodeShape ;
     sh:path [ sh:alternativePath (dc:subject dc:type dcterms:spatial dcterms:temporal)];
     sh:minCount 1 ;
     sh:message "At least one the following properties should be present: dc:subject, dc:type, dcterms:spatial or dcterms:temporal"];
+  sh:property [
+    sh:path dcterms:medium ;
+    sh:datatype xsd:string ;
+    sh:message "Invalid type for dcterms:medium, must be of type string"];
   sh:node [
     sh:node ex:hasLang ;
     sh:message "Property dc:language is required with edm:type='TEXT'" ].
