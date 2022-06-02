@@ -147,7 +147,10 @@ select ?size ?dataUrl ?sparqlUrl ?query {
         }
         try {
           text = await response.text();
-          ctx.store.addQuads(parser.parse(text));
+          const quads = (parser.parse(text)).map((q) => {
+            return ctx.store.quad(q.subject,q.predicate,q.object,defaultGraph("edm"));
+          });
+          ctx.store.addQuads(quads);
         } catch (error) {
           if (!(error instanceof Error))
             throw new Error(
@@ -247,7 +250,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
 
   pipe.use(
     mw.validateShacl(pipe.sources.shaclShapes, {
-      //graphs: [defaultGraph("edm")],
+      graphs: [defaultGraph("edm")],
       terminateOn: "Never",
       report: { destination: pipe.destinations.report },
     })
