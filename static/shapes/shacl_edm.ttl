@@ -35,7 +35,10 @@ ex:ProvidedCHO a sh:NodeShape ;
     sh:message "At least one the following properties should be present: dc:subject, dc:type, dcterms:spatial or dcterms:temporal"];
   sh:property [
     sh:path dcterms:medium ;
-    sh:datatype xsd:string ;
+    sh:or (  # allow plain strings or strings with language attribute
+		  [ sh:datatype xsd:string ; ]
+		  [ sh:datatype rdf:langString ; ]
+	  ) ;
     sh:message "Invalid type for dcterms:medium, must be of type string"];
   sh:node [
     sh:node ex:hasLang ;

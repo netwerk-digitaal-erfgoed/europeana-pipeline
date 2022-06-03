@@ -96,17 +96,17 @@ WHERE {
         OPTIONAL { ?uri_cho schema:sameAs ?sameAs }
         OPTIONAL { ?uri_cho schema:locationCreated ?spatial }
         OPTIONAL { ?uri_cho schema:dateCreated ?temporal }
-
-        ## NB: dirty hack because schema:material refers to a URI but 
-        ## EDM require a string type for dcterms:medium
+ 
+        # EDM requires a string type for dcterms:medium
+        # so we do a federated query to the Getty enpoint
+        # to collect the Dutch label for the material URI
+        # note: this has serious impact on the performance
         OPTIONAL { 
           ?uri_cho schema:material ?materialUri
-          BIND(IF(?materialUri = <http://vocab.getty.edu/aat/300014109>,"papier",
-               IF(?materialUri = <http://vocab.getty.edu/aat/300015012>,"inkt",
-               IF(?materialUri = <http://vocab.getty.edu/aat/300227525>,"kalfsleer",
-               IF(?materialUri = <http://vocab.getty.edu/aat/300011845>,"leer",
-               IF(?materialUri = <http://vocab.getty.edu/aat/300391345>,"imitatie bladgoud",
-               IF(?materialUri = <http://vocab.getty.edu/aat/300227857>,"marokijnleer","onbekend")))))) as ?material)
+          service <http://vocab.getty.edu/sparql> {
+               ?materialUri rdfs:label ?material             
+               FILTER(langMatches(lang(?material),"nl"))
+          }
         }
         OPTIONAL { ?uri_cho schema:isPartOf ?isPartOf }
         OPTIONAL {
