@@ -6,11 +6,22 @@
 #	docker build -f ./crawler/Dockerfile -t edm-conversie-crawler .
 # - TRIPLYDB_TOKEN set as environment variable (get your API token via user settings
 #   on https://data.netwerkdigitaalerfgoed.nl/ and put it in your .bashrc file) 
-# - Run from root of repository, eg. bash ./static/scripts/albac.bijdrage.sh
+# - Run from root of repository, eg. bash ./static/scripts/runall.sh
 
-if [[ -z "${TRIPLYDB_TOKEN}" || -z "${SOURCE_DATASET}" || -z "${DESTINATION_DATASET}" || -z "${LOCAL_QUERY}" || -z "${SHACL_REPORT}" ]]; then
-	echo "ERROR: one or more environment variables not set, use run 'europeana-pipeline/.envrc' to configure them, quitting"
+if [ $# = 0 ]; then
+  echo "Please pass the config script configured for the dataset you want to process..."
+  exit
+fi
+SCRIPT_PATH=$(dirname $(realpath -s $0))
+source $SCRIPT_PATH/$1
+
+if [[ -z "${SOURCE_DATASET}" || -z "${DESTINATION_DATASET}" || -z "${LOCAL_QUERY}" || -z "${VALIDATION_REPORT}" ]]; then
+	echo "ERROR: one or more environment variables not set, see Readme.md for more details"
 	exit
+fi
+
+if [[ -z "${TRIPLYDB_TOKEN}" ]]; then
+   echo "WARNING: TRIPLYDB_TOKEN not set, this could cause problems for converting larger datasets (variant 3)"
 fi
 
 # make "shared" directory in working directory $PWD
@@ -22,6 +33,7 @@ docker run --rm \
 	  -e LOCAL_QUERY=${LOCAL_QUERY} \
 	  -e SOURCE_DATASET=${SOURCE_DATASET} \
 	  -e DESTINATION_DATASET=${DESTINATION_DATASET} \
+	  -e VALIDATION_REPORT=${VALIDATION_REPORT} \
 	  -e MODE=acceptance \
 	  --name edm-conversie-project-acceptance \
 	  edm-conversie-etl \
@@ -33,11 +45,17 @@ docker run --rm \
 	  -e LOCAL_QUERY=${LOCAL_QUERY} \
 	  -e SOURCE_DATASET=${SOURCE_DATASET} \
 	  -e DESTINATION_DATASET=${DESTINATION_DATASET} \
-	  -e SHACL_REPORT \
 	  -e MODE=acceptance \
 	  --name edm-conversie-project-acceptance \
 	  edm-conversie-crawler \
 	  ./rdf2edm.sh
+
+if [[ -z "${TRIPLYDB_TOKEN}" ]]; then
+   echo "TRIPLYDB_TOKEN not set, skipping the upload to TriplyDB"
+   echo ""
+   echo "$SOURCE_DATASET was transformed to EDM RDF, available in work/rdf/$DESTINATION_DATASET.xml.zip."
+   exit
+fi
 
 echo "3 - Store dataset"
 

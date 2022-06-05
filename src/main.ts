@@ -21,53 +21,32 @@ const maxComunicaSize = 20_000_000;
 
 export default async function (cliContext: CliContext): Promise<Ratt> {
   // RATT context
+
+  // Specify the generic datasetregister and shape vars, the default values will probably work 
+  // they can be overriden by environment variable - see Readme for details
+  const datasetRegisterUrl = process.env.DSR_URI || "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry" ;
+  const datasetRegisterQuery = process.env.DSR_QUERY || "static/queries/datasetregister.rq";
+  const shaclShapeFile = process.env.SHACL_SHAPE_FILE || "static/shapes/shacl_edm.ttl";
+
+  // The following environment variables are dataset specific
+  // See static/scripts/env-example for more details about configuring theser 
   const sourceDatasetName = process.env.SOURCE_DATASET;
-  const destinationDatasetName = process.env.DESTINATION_DATASET;
-  const shaclReportName = process.env.SHACL_REPORT;
-  const localQueryLocation = process.env.LOCAL_QUERY;
   if (!sourceDatasetName)
     throw new Error("Expected environment variable SOURCE_DATASET to be set");
+
+  const destinationDatasetName = process.env.DESTINATION_DATASET;
   if (!destinationDatasetName)
-    throw new Error(
-      "Expected environment variable DESTINATION_DATASET to be set"
-    );
+    throw new Error("Expected environment variable DESTINATION_DATASET to be set");
 
-  const sparqlQuery = `
-prefix dcat: <http://www.w3.org/ns/dcat#>
-prefix dct: <http://purl.org/dc/terms/>
-select ?size ?dataUrl ?sparqlUrl ?query {
-  bind(<${sourceDatasetName}> as ?dataset)
-  ?dataset a dcat:Dataset .
-  ?dataset dcat:distribution ?distribution .
-  ?distribution dct:format ?format .
-  ?distribution dcat:accessURL ?dataUrl0 .
-  bind(str(?dataUrl0) as ?dataUrl)
-  filter(?format in ("application/n-quads", "application/n-triples", "application/trig", "application/turtle", "text/n3", "text/turtle", "application/sparql-query"))
-  optional {
-    ?distribution dcat:byteSize ?size0.
-    bind(xsd:integer(?size0) as ?size)
-  }
-  optional {
-    # ?service
-    #   a dcat:DataService;
-    #   dcat:servesDataset ?dataset;
-    #   dcat:endpointURL ?endpoint.
-    # # Optional: also specify the result of a specific query (probably not needed).
-    # ?result
-    #   a dcat:Distribution;
-    #   dcat:accessService ?service;
-    #   dcat:mediaType 'application/sparql-results+json'.
+  const shaclReportName = process.env.VALIDATION_REPORT;
+  if (!shaclReportName)
+    throw new Error("Expected environment variable SHACL_REPORT to be set");
 
-    # OOPS: Wrong data model.
-    ?dataset dcat:distribution ?sparqlDistribution .
-    ?sparqlDistribution dcat:accessURL ?sparqlUrl0 .
-    bind(str(?sparqlUrl0) as ?sparqlUrl)
-    ?sparqlDistribution dct:format "application/sparql-query" .
-  }
-} limit 1`;
+  // Optional variable needed when the transformation query is not in the metadata of the dataset
+  const localQueryLocation = process.env.LOCAL_QUERY;
 
-  const datasetRegisterUrl =
-    "https://triplestore.netwerkdigitaalerfgoed.nl/repositories/registry";
+  const data = fs.readFileSync(`${datasetRegisterQuery}`,"utf8");
+  const dsrQuery=data.toString().replace("${sourceDatasetName}",`${sourceDatasetName}`);
   const dataDir = cliContext.dataDir || "./data";
   const pipe = new Ratt({
     defaultGraph: defaultGraph,
@@ -76,7 +55,7 @@ select ?size ?dataUrl ?sparqlUrl ?query {
     sources: {
       dataset: Ratt.Source.url(datasetRegisterUrl, {
         request: {
-          body: sparqlQuery,
+          body: dsrQuery,
           headers: {
             accept: "text/tab-separated-values",
             "content-type": "application/sparql-query",
@@ -84,15 +63,11 @@ select ?size ?dataUrl ?sparqlUrl ?query {
           method: "post",
         },
       }),
-      shaclShapes: Ratt.Source.file("static/shapes/shacl_edm.ttl"),
+      shaclShapes: Ratt.Source.file(`${shaclShapeFile}`),
     },
     destinations: {
-      dataset: Ratt.Destination.file(
-        `${dataDir}/rdf/${destinationDatasetName}.ttl`
-      ),
-      report: Ratt.Destination.file(
-        `${dataDir}/rdf/${shaclReportName}.ttl`
-      )
+      dataset: Ratt.Destination.file(`${dataDir}/rdf/${destinationDatasetName}.ttl`),
+      report: Ratt.Destination.file(`${dataDir}/rdf/${shaclReportName}.ttl`)
     },
   });
 

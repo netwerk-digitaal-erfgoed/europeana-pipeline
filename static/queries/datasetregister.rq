@@ -1,0 +1,21 @@
+prefix dcat: <http://www.w3.org/ns/dcat#>
+prefix dct: <http://purl.org/dc/terms/>
+select ?size ?dataUrl ?sparqlUrl ?query {
+  bind(<${sourceDatasetName}> as ?dataset)
+  ?dataset a dcat:Dataset .
+  ?dataset dcat:distribution ?distribution .
+  ?distribution dct:format ?format .
+  ?distribution dcat:accessURL ?dataUrl0 .
+  bind(str(?dataUrl0) as ?dataUrl)
+  filter(?format in ("application/n-quads", "application/n-triples", "application/trig", "application/turtle", "text/n3", "text/turtle", "application/sparql-query"))
+  optional {
+    ?distribution dcat:byteSize ?size0.
+    bind(xsd:integer(?size0) as ?size)
+  }
+  optional {
+    ?dataset dcat:distribution ?sparqlDistribution .
+    ?sparqlDistribution dcat:accessURL ?sparqlUrl0 .
+    bind(str(?sparqlUrl0) as ?sparqlUrl)
+    ?sparqlDistribution dct:format "application/sparql-query" .
+  }
+} limit 1

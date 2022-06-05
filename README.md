@@ -62,7 +62,22 @@ Some developers do not want to repeatedly write the `yarn build` command.  By ru
 
 The pipeline step developed in JAVA also needs to be transpiled. This can be done by entering the `crawler` directory from the command line and executing the command: `mvn --quiet -e -f ./pom.xml clean assembly:assembly` This will transpile the JAVA code in a JAR executable.
 
-#### 2.1.2 Running steps 1 through 4
+#### 2.1.2 Setup the environment variables
+Set up some generic environment variables with:
+```sh
+./.envrc
+```
+This will create a .envrc-private in the root directory. Edit this script to set the variables for your environment. To upload the converted data to a TriplyDB instance or to convert larger dataset (>20Mb) set a TriplyDB apikey through the TRIPLYDB_TOKEN. The .envrc-private script also sets the default values for the NDE Datasetregister (URL and query) and EDM SHACL validation script have set by default, adjust these if neccessary. 
+
+Each time running the pipeline the .envrc-private script must be sourced by using:
+
+```
+source ./.envrc-private
+```
+
+The CI/CD setup is stil under development (see below). For single runs the `static/scripts/runall.sh` script can be used, a script with environment variables for each datasource must be provided. See `static/scripts/env-example` for more information.  
+
+#### 2.1.3 Running steps 1 through 4
 
 The following command runs the first part of the pipeline:
 
@@ -72,7 +87,7 @@ yarn ratt ./lib/main.js
 
 This command will retrieve the dataset metadata from the `SOURCE_DATASET` environment variable. It will then look for a viable SPARQL endpoint and construct the EDM mapped linked data from the endpoint. Finally the pipeline validates the linked data and creates the local linked data file ready to be transformed by the JAR executable.  
 
-#### 2.1.3 Running the JAR executable
+#### 2.1.4 Running the JAR executable
 
 To run the rdf2edm locally we need to move to the correct library to run the JAR, which will be executed by running the bash script on the second line.
 
@@ -83,7 +98,7 @@ cd crawler/target/
 
 The bash script runs the JAR that transforms the linked data file to the format Europeana can ingest. The  
 
-#### 2.1.4 Running the after step
+#### 2.1.5 Running the after step
 
 The following command runs the final part of the pipeline moving back to the main folder, the afterhook for uploading the xml assets and the linked data.
 
@@ -94,7 +109,7 @@ yarn ratt ./lib/after.js
 
 This will upload the linked data to the `DESTINATION_DATASET` on the instance where the `TRIPLYDB_TOKEN` was created. The EDM xml files will be uploaded to the same `DESTINATION_DATASET` as a zipped asset.
 
-#### 2.1.5 Running complete pipeline from the command line
+#### 2.1.6 Running complete pipeline from the command line
 
 Sometimes you want to run the entire pipeline in a single command. To run the pipeline you can copy paste the following set of commands:
 

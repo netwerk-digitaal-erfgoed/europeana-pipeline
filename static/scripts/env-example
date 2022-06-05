@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# SOURCE_DATASET :: The IRI that denotes the source dataset in the NDE Dataset Registry.
+# example: export SOURCE_DATASET="http://data.bibliotheken.nl/id/dataset/albac"
+export SOURCE_DATASET=
+
+# DESTINATION_DATASET :: The name of the dataset in TriplyDB.  The name must only use alphanumeric characters and hyphen (`-`).
+# example: export DESTINATION_DATASET="albac
+export DESTINATION_DATASET=
+
+# LOCAL_QUERY :: The location where the transformation can be found.  Notice that this is only used when the source dataset does not include a transformation query in its metadata.
+# example: export LOCAL_QUERY="static/queries/albac2edm.rq
+export LOCAL_QUERY=
+
+# SHACL_REPORT :: Set the shacl report output file
+# example: export VALIDATION_REPORT="albac-validation-report
+export VALIDATION_REPORT=
+
+# SHACL_SHAPE_FILE :: The default shape file is 'shacl_edm.ttl' (see static/shapes/) use this variable to specify a different shape file
+# export SHACL_SHAPE_FILE
