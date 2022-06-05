@@ -67,7 +67,7 @@ Set up some generic environment variables with:
 ```sh
 ./.envrc
 ```
-This will create a .envrc-private in the root directory. Edit this script to set the variables for your environment. To upload the converted data to a TriplyDB instance or to convert larger dataset (>20Mb) set a TriplyDB apikey through the TRIPLYDB_TOKEN. The .envrc-private script also sets the default values for the NDE Datasetregister (URL and query) and EDM SHACL validation script have set by default, adjust these if neccessary. 
+This will create a .envrc-private in the root directory. Edit this script to set the variables for your environment. To upload the converted data to a TriplyDB instance or to convert larger dataset (>20Mb) set a TriplyDB apikey through the TRIPLYDB_TOKEN. The .envrc-private script also has a placeholder for setting the variables for NDE Datasetregister (URL and query) and EDM SHACL validation script. The are set by default in the code but can be overidden by the setting the environment variables. 
 
 Each time running the pipeline the .envrc-private script must be sourced by using:
 
