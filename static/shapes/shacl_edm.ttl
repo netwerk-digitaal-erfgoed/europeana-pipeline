@@ -68,7 +68,20 @@ ex:Aggregation a sh:NodeShape ;
     sh:path edm:rights ;
     sh:nodeKind sh:IRI ;
     sh:minCount 1 ;
-    sh:message "Missing or invalid value for edm:rights"];
+	sh:in ( <http://creativecommons.org/publicdomain/mark/1.0/> 
+          <http://www.europeana.eu/rights/out-of-copyright-non-commercial/>
+          <http://creativecommons.org/publicdomain/zero/1.0/>
+          <http://creativecommons.org/licenses/by/4.0/>
+          <http://creativecommons.org/licenses/by-sa/4.0/>
+          <http://creativecommons.org/licenses/by-nd/4.0/>
+          <http://creativecommons.org/licenses/by-nc/4.0/>
+          <http://creativecommons.org/licenses/by-nc-sa/4.0/>
+          <http://creativecommons.org/licenses/by-nc-nd/4.0/>
+          <http://www.europeana.eu/rights/rr-f/>
+          <http://www.europeana.eu/rights/rr-p/> 
+          <http://www.europeana.eu/rights/orphan-work-eu/>
+          <http://www.europeana.eu/rights/unknown/> ) ;
+    sh:message "Missing or invalid value for edm:rights, check the value is one of the controlled values: http://pro.europeana.eu/web/guest/available-rights-statements" ];
   sh:property [
     sh:path [ sh:alternativePath (edm:isShownAt edm:isShownBy)];
     sh:nodeKind sh:IRI ;
