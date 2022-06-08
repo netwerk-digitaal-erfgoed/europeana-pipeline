@@ -1,0 +1,13 @@
+#!/bin/bash
+
+# SOURCE_DATASET :: The IRI that denotes the source dataset in the NDE Dataset Registry.
+export SOURCE_DATASET="https://studiezaal.nijmegen.nl/AtlantisPubliek/data/dataset/LOD+Beelddocumenten"
+
+# DESTINATION_DATASET :: The name of the dataset in TriplyDB.  The name must only use alphanumeric characters and hyphen (`-`).
+export DESTINATION_DATASET="ran-beeldbank"
+
+# LOCAL_QUERY :: The location where the transformation can be found.  Notice that this is only used when the source dataset does not include a transformation query in its metadata.
+export LOCAL_QUERY="static/queries/schema2edm.rq"
+
+# SHACL_REPORT :: Set the shacl report output file
+export VALIDATION_REPORT="ran-beeldbank-validation-report"
