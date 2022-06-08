@@ -35,11 +35,8 @@ ex:ProvidedCHO a sh:NodeShape ;
     sh:message "At least one the following properties should be present: dc:subject, dc:type, dcterms:spatial or dcterms:temporal"];
   sh:property [
     sh:path dcterms:medium ;
-    sh:or (  # allow plain strings or strings with language attribute
-		  [ sh:datatype xsd:string ; ]
-		  [ sh:datatype rdf:langString ; ]
-	  ) ;
-    sh:message "Invalid type for dcterms:medium, must be of type string"];
+    sh:nodeKind sh:IRIOrLiteral ;
+    sh:message "Invalid type for dcterms:medium, must be of type string or URI"];
   sh:node [
     sh:node ex:hasLang ;
     sh:message "Property dc:language is required with edm:type='TEXT'" ].
@@ -68,8 +65,8 @@ ex:Aggregation a sh:NodeShape ;
     sh:path edm:rights ;
     sh:nodeKind sh:IRI ;
     sh:minCount 1 ;
-	sh:in ( <http://creativecommons.org/publicdomain/mark/1.0/> 
-          <http://www.europeana.eu/rights/out-of-copyright-non-commercial/>
+	sh:in ( <http://www.europeana.eu/rights/out-of-copyright-non-commercial/>
+          <http://creativecommons.org/publicdomain/mark/1.0/>
           <http://creativecommons.org/publicdomain/zero/1.0/>
           <http://creativecommons.org/licenses/by/4.0/>
           <http://creativecommons.org/licenses/by-sa/4.0/>
@@ -81,7 +78,7 @@ ex:Aggregation a sh:NodeShape ;
           <http://www.europeana.eu/rights/rr-p/> 
           <http://www.europeana.eu/rights/orphan-work-eu/>
           <http://www.europeana.eu/rights/unknown/> ) ;
-    sh:message "Missing or invalid value for edm:rights, check the value is one of the controlled values: http://pro.europeana.eu/web/guest/available-rights-statements" ];
+    sh:message "Missing or invalid value for edm:rights, check the value is one of the controlled values: https://pro.europeana.eu/page/available-rights-statements" ];
   sh:property [
     sh:path [ sh:alternativePath (edm:isShownAt edm:isShownBy)];
     sh:nodeKind sh:IRI ;
