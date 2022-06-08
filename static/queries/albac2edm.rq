@@ -25,7 +25,7 @@ CONSTRUCT {
          owl:sameAs ?sameAs ;
          dcterms:spatial ?spatial ;
          dcterms:temporal ?temporal ;
-         dcterms:isPartOf ?isPartOf ;
+         #dcterms:isPartOf ?isPartOf ;  currently the rdf2edm tool creates problems when this is added - FIX needed!!
          dc:language ?language ;
          dcterms:medium ?material .   
 
@@ -49,7 +49,7 @@ WHERE {
 
         # CreativeWorks not of type schema:Book are treated as images
         {
-	     ?uri_cho a ?type .
+	        ?uri_cho a ?type .
           VALUES ?type { schema:CreativeWork }
           BIND(("IMAGE") as ?edm_type )
           FILTER NOT EXISTS {
@@ -62,8 +62,13 @@ WHERE {
           ?uri_cho a schema:Book .
           BIND(("TEXT") as ?edm_type )
 
-          # hack because type TEXT resource require a language definition
+          # FIX: hack because type TEXT resource require a language definition
           BIND(("nl") as ?language )
+
+          # there is no landing page in the data, which is required when no there is 
+          # no link to an image URI. So in this case we use the LOD html page as 
+          # landing page
+          OPTIONAL { ?uri_cho schema:mainEntityOfPage/schema:mainEntity ?isShownAt }
         } 
 
         # Generate an "URI_CHO#agg" URI pointing to a ore:Aggregation resource. 
@@ -74,7 +79,12 @@ WHERE {
         BIND( STR('KB') as ?dataProvider)
 
         # creator are given as URIs
-        OPTIONAL { ?uri_cho schema:creator ?creator }
+        OPTIONAL { 
+          # FIX?: creator can be a URI or Blank Node
+          ?uri_cho schema:creator ?creatorURI .
+          ?uri_cho schema:creator/schema:name ?creatorName .
+          BIND(IF(ISBLANK(?creatorURI),?creatorName,?creatorURI) as ?creator)
+        }
 
         # contributor are given as blank nodes so we collect the name
         OPTIONAL { ?uri_cho schema:contributor/schema:name ?contributor }
@@ -83,31 +93,25 @@ WHERE {
         OPTIONAL { ?uri_cho schema:name ?name }
 
         # for contributions the license field exists as a property of schema:image 
-        OPTIONAL { ?uri_cho schema:image/schema:license ?license }
+        OPTIONAL { 
+          ?uri_cho schema:image/schema:license ?license 
+          # FIX: source data contains wrong license URI so a temp fix
+          BIND(IF(?license_raw = <http://creativecommons.org/publicdomain>,
+                  <http://creativecommons.org/publicdomain/mark/1.0/>,?license_raw) as ?license)
+        }
 
         # for the schema:Book the license field is given in the schema:mainEntityOfPage
-        OPTIONAL { ?uri_cho schema:mainEntityOfPage/schema:license ?license }
-
-        # there is no landing page in the data, which is required when no there is 
-        # no link to an image URI. So in this case we use the LOD html page as 
-        # landing page
-        OPTIONAL { ?uri_cho schema:mainEntityOfPage/schema:mainEntity ?isShownAt }
+        OPTIONAL { 
+          ?uri_cho schema:mainEntityOfPage/schema:license ?license_raw 
+          # FIX: source data contains wrong license URI so a temp fix
+          BIND(IF(?license_raw = <http://creativecommons.org/publicdomain>,
+                  <http://creativecommons.org/publicdomain/mark/1.0/>,?license_raw) as ?license)
+        }
         OPTIONAL { ?uri_cho schema:publisher ?publisher }
         OPTIONAL { ?uri_cho schema:sameAs ?sameAs }
         OPTIONAL { ?uri_cho schema:locationCreated ?spatial }
         OPTIONAL { ?uri_cho schema:dateCreated ?temporal }
- 
-        # EDM requires a string type for dcterms:medium
-        # so we do a federated query to the Getty enpoint
-        # to collect the Dutch label for the material URI
-        # note: this has serious impact on the performance
-        OPTIONAL { 
-          ?uri_cho schema:material ?materialUri
-          service <http://vocab.getty.edu/sparql> {
-               ?materialUri rdfs:label ?material             
-               FILTER(langMatches(lang(?material),"nl"))
-          }
-        }
+        OPTIONAL { ?uri_cho schema:material ?material }
         OPTIONAL { ?uri_cho schema:isPartOf ?isPartOf }
         OPTIONAL {
           # collect the URI for the images 
@@ -118,19 +122,24 @@ WHERE {
    }
    UNION 
    {
-      # because multiple images exists for contributions 
+      # FIX: because multiple images exists for contributions 
       # a sample of one is taken because isShownBy is only
-      # allowed to have one value, all the images are 
+      # allowed to have a single value, all the images are 
       # stored into edm:hasView
       SELECT ?uri_cho ?uri_ore(SAMPLE(?imageUrl) as ?isShownBy) {
         ?uri_cho schema:mainEntityOfPage [schema:isPartOf <http://data.bibliotheken.nl/id/dataset/albac> ] .
         #?uri_cho a schema:CreativeWork  .
         BIND( URI(CONCAT(STR(?uri_cho),"#agg")) as ?uri_ore)
         OPTIONAL {
-          # Europeana requires valid URI for edm:isShownBy 
           ?uri_cho schema:image/schema:contentUrl ?image
-          BIND(IRI(?image) as ?imageUrl)
         }
-    }
-  }
+        # FIX: Europeana requires valid URI for edm:isShownBy for non TEXT materials
+        # So to pass the validation we add a fake image when missing
+        # Currently the case for 310925355_band and e390149349_band !!
+        BIND(IF(!BOUND(?image),<http://example.org/fakeimage.png>,IRI(?image)) as ?imageUrl)
+        FILTER NOT EXISTS {
+          ?uri_cho a schema:Book
+        }
+      }
+   }
 }
